@@ -14,5 +14,4 @@ jobs:
       - uses: 9sako6/imgcmp@v2.0.4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          paths-ignore-regexp: "(/.*)" # ignore everything but the profiles folder
-          paths-include-regexp: "resources/profiles/.*"
+          paths-include-regexp: "resources/profiles/.*" # ignore everything but the profiles folder
