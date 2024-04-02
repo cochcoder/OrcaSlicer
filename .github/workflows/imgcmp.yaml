@@ -1,4 +1,4 @@
-name: imgcmp
+name: imgcmp_profiles
 on:
   push:
     branches:
@@ -15,3 +15,21 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           paths-ignore-regexp: "(doc/.*)|(SoftFever_doc/.*)|(resources/web/.*)|(resources/images/.*)"
+
+name: imgcmp_images
+on:
+  push:
+    branches:
+      - main
+      - optimzation # for testing purposes 
+jobs:
+  imgcmp:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: 9sako6/imgcmp@v2.0.4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          paths-ignore-regexp: "(doc/.*)|(SoftFever_doc/.*)|(resources/web/.*)|(resources/profiles/.*)"
