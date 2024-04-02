@@ -14,3 +14,4 @@ jobs:
       - uses: 9sako6/imgcmp@v2.0.4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          paths-ignore-regexp: "(doc/.*)" # ignore doc images
