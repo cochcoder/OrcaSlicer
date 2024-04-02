@@ -5,7 +5,7 @@ on:
       - main
       - optimzation # for testing purposes 
 jobs:
-  imgcmp:
+  imgcmp_profiles:
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -15,15 +15,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           paths-ignore-regexp: "(doc/.*)|(SoftFever_doc/.*)|(resources/web/.*)|(resources/images/.*)"
-
-name: imgcmp_images
-on:
-  push:
-    branches:
-      - main
-      - optimzation # for testing purposes 
-jobs:
-  imgcmp:
+  imgcmp_images:
     runs-on: ubuntu-latest
     permissions:
       contents: write
