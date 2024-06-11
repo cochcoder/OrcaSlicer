@@ -59,7 +59,7 @@ jobs:
       arch: ${{ matrix.arch }}
       build-deps-only: ${{ inputs.build-deps-only || false }}
     secrets: inherit
-  flatpak:
+  flatpak_x86_64:
     name: "Flatpak x86_64"
     runs-on: ubuntu-latest
     container:
@@ -91,7 +91,7 @@ jobs:
         manifest-path: flatpak/io.github.softfever.OrcaSlicer.yml
         cache-key: flatpak-builder-${{ github.sha }}
         cache: false
-  flatpak:
+  flatpak_aarch64:
     name: "Flatpak aarch64"
     runs-on: ubuntu-latest
     container:
