@@ -60,7 +60,7 @@ jobs:
       build-deps-only: ${{ inputs.build-deps-only || false }}
     secrets: inherit
   flatpak_x86_64:
-    name: "Flatpak x86_64"
+    name: "Flatpak"
     runs-on: ubuntu-latest
     container:
       image: bilelmoussaoui/flatpak-github-actions:gnome-45
@@ -92,7 +92,7 @@ jobs:
         cache-key: flatpak-builder-${{ github.sha }}
         cache: false
   flatpak_aarch64:
-    name: "Flatpak aarch64"
+    name: "Flatpak"
     runs-on: ubuntu-latest
     container:
       image: bilelmoussaoui/flatpak-github-actions:gnome-45
