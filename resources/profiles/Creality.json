@@ -107,6 +107,10 @@
         {
             "name": "Creality K1 Max",
             "sub_path": "machine/Creality K1 Max.json"
+        },
+        {
+            "name": "Creality CR-10S Pro V2",
+            "sub_path": "machine/Creality CR-10S Pro V2.json"
         }
     ],
     "process_list": [
@@ -1025,6 +1029,26 @@
         {
             "name": "0.48mm Draft @Creality K1Max (0.8 nozzle)",
             "sub_path": "process/0.48mm Draft @Creality K1Max (0.8 nozzle).json"
+        },
+        {
+            "name": "0.12mm Fine @Creality CR10S Pro V2 0.4",
+            "sub_path": "process/0.12mm Fine @Creality CR10S Pro V2 0.4.json"
+        },
+        {
+            "name": "0.16mm Optimal @Creality CR10S Pro V2 0.4",
+            "sub_path": "process/0.16mm Optimal @Creality CR10S Pro V2 0.4.json"
+        },
+        {
+            "name": "0.20mm Standard @Creality CR10S Pro V2 0.4",
+            "sub_path": "process/0.20mm Standard @Creality CR10S Pro V2 0.4.json"
+        },
+        {
+            "name": "0.24mm Draft @Creality CR10S Pro V2 0.4",
+            "sub_path": "process/0.24mm Draft @Creality CR10S Pro V2 0.4.json"
+        },
+        {
+            "name": "0.28mm SuperDraft @Creality CR10S Pro V2 0.4",
+            "sub_path": "process/0.28mm SuperDraft @Creality CR10S Pro V2 0.4.json"
         }
     ],
     "filament_list": [
@@ -1437,6 +1461,10 @@
         {
             "name": "Creality K1 Max (0.8 nozzle)",
             "sub_path": "machine/Creality K1 Max (0.8 nozzle).json"
+        },
+        {
+            "name": "Creality CR-10S Pro V2 0.4 nozzle",
+            "sub_path": "machine/Creality CR-10S Pro V2 0.4 nozzle.json"
         }
     ]
 }
