@@ -63,11 +63,12 @@ jobs:
     name: "Flatpak"
     runs-on: ubuntu-latest
     container:
-      image: bilelmoussaoui/flatpak-github-actions:gnome-45
+      image: bilelmoussaoui/flatpak-github-actions:freedesktop-23.08
       options: --privileged
     strategy:
       matrix:
         arch: [x86_64, aarch64]
+      fail-fast: false
     steps:
     # maybe i'm too dumb and fucked up to do CI. OH WELL :D -ppd
     - name: "Remove unneeded stuff to free disk space"
@@ -95,7 +96,7 @@ jobs:
     name: "Flatpak"
     runs-on: ubuntu-latest
     container:
-      image: bilelmoussaoui/flatpak-github-actions:gnome-45
+      image: bilelmoussaoui/flatpak-github-actions:freedesktop-23.08
       options: --privileged
     strategy:
       matrix:
