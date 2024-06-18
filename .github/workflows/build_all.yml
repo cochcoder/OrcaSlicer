@@ -95,7 +95,7 @@ jobs:
     name: "Flatpak"
     runs-on: ubuntu-latest
     container:
-      image: bilelmoussaoui/flatpak-github-actions:gnome-45
+      image: bilelmoussaoui/flatpak-github-actions:freedesktop-23.08
       options: --privileged
     strategy:
       matrix:
