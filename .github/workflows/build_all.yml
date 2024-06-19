@@ -98,11 +98,10 @@ jobs:
       uses: docker/setup-qemu-action@v2
       with:
         platforms: arm64
-        cpus: 4
     - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
       with:
         bundle: orcaslicer.flatpak
         manifest-path: flatpak/io.github.softfever.OrcaSlicer.yml
         cache-key: flatpak-builder-${{ github.sha }}
-        cache: false
+        cache: true
         arch: aarch64
