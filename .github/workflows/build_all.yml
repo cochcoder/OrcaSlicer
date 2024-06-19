@@ -78,7 +78,7 @@ jobs:
         cache-key: flatpak-builder-${{ github.sha }}
         aarch: x86_64
   flatpak_aarch64:
-    name: "Flatpak"
+    name: "Flatpak (aarch64)"
     runs-on: ubuntu-latest
     container:
       image: bilelmoussaoui/flatpak-github-actions:gnome-45
