@@ -76,16 +76,13 @@ jobs:
         bundle: orcaslicer.flatpak
         manifest-path: flatpak/io.github.softfever.OrcaSlicer.yml
         cache-key: flatpak-builder-${{ github.sha }}
-        cache: false
+        aarch: x86_64
   flatpak_aarch64:
     name: "Flatpak"
     runs-on: ubuntu-latest
     container:
       image: bilelmoussaoui/flatpak-github-actions:gnome-45
       options: --privileged
-    strategy:
-      matrix:
-        arch: [aarch64]
     steps:
     # maybe i'm too dumb and fucked up to do CI. OH WELL :D -ppd
     - name: "Remove unneeded stuff to free disk space"
@@ -94,11 +91,9 @@ jobs:
     - uses: actions/checkout@v4
     # Docker is required by the docker/setup-qemu-action which enables emulation
     - name: Install deps
-      if: ${{ matrix.arch != 'x86_64' }}
       run: |
         dnf -y install docker
     - name: Set up QEMU
-      if: ${{ matrix.arch != 'x86_64' }}
       id: qemu
       uses: docker/setup-qemu-action@v2
       with:
@@ -109,4 +104,4 @@ jobs:
         manifest-path: flatpak/io.github.softfever.OrcaSlicer.yml
         cache-key: flatpak-builder-${{ github.sha }}
         cache: false
-        arch: ${{ matrix.arch }}
+        arch: aarch64
