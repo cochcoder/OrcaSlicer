@@ -82,7 +82,7 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: bilelmoussaoui/flatpak-github-actions:gnome-45
-      options: --privileged
+      options: --privileged --parallel --jobs=4
     steps:
     # maybe i'm too dumb and fucked up to do CI. OH WELL :D -ppd
     - name: "Remove unneeded stuff to free disk space"
