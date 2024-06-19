@@ -76,7 +76,6 @@ jobs:
         bundle: orcaslicer.flatpak
         manifest-path: flatpak/io.github.softfever.OrcaSlicer.yml
         cache-key: flatpak-builder-${{ github.sha }}
-        aarch: x86_64
   flatpak_aarch64:
     name: "Flatpak (aarch64)"
     runs-on: ubuntu-latest
