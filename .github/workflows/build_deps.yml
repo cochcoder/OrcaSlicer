@@ -83,14 +83,12 @@ jobs:
 
       - name: Install deps for QEMU
         if: inputs.os == 'ubuntu-24.04' || inputs.arch == 'arm64'
-        working-directory: ${{ github.workspace }}
         run: |
           sudo apt-get update
           sudo apt-get install -y docker
 
       - name: Set up QEMU
         if: inputs.os == 'ubuntu-24.04' || inputs.arch == 'arm64'
-        working-directory: ${{ github.workspace }}
         id: qemu
         uses: docker/setup-qemu-action@v2
         with:
