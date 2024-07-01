@@ -82,7 +82,7 @@ jobs:
             brew install zstd
 
       - name: Install deps for QEMU
-        if: inputs.os == 'ubuntu-24.04' || inputs.arch == 'arm64'
+        if: inputs.os == 'ubuntu-24.04' && inputs.arch == 'arm64'
         run: |
           sudo apt-get update
           sudo apt-get install ca-certificates curl
