@@ -220,6 +220,20 @@ jobs:
           max_releases: 1
 
 # Ubuntu
+      - name: Set up QEMU
+        steps: 
+        - name: Install deps
+          if: inputs.os == 'ubuntu-24.04' || inputs.arch == 'arm64'
+          run: |
+            sudo apt-get update
+            sudo apt-get install -y docker
+        - name: Set up QEMU
+          if: inputs.os == 'ubuntu-24.04' || inputs.arch == 'arm64'
+          id: qemu
+          uses: docker/setup-qemu-action@v2
+          with:
+            platforms: arm64
+
       - name: Install dependencies
         if: inputs.os == 'ubuntu-20.04' || inputs.os == 'ubuntu-24.04'
         env:
