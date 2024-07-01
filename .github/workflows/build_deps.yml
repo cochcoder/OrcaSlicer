@@ -86,12 +86,19 @@ jobs:
         if: inputs.os == 'ubuntu-20.04'
         working-directory: ${{ github.workspace }}
         run: |
-            apt-fast update
-            apt-fast install -y cmake git g++ build-essential libgl1-mesa-dev m4 \
+            sudo apt-get update
+            sudo apt-get install -y cmake git g++ build-essential libgl1-mesa-dev m4 \
             libwayland-dev libxkbcommon-dev wayland-protocols extra-cmake-modules pkgconf \
             libglu1-mesa-dev libcairo2-dev libgtk-3-dev libsoup2.4-dev libwebkit2gtk-4.0-dev \
             libgstreamer1.0-dev libgstreamer-plugins-good1.0-dev libgstreamer-plugins-base1.0-dev \
             gstreamer1.0-plugins-bad libosmesa6-dev wget sudo autoconf curl libunwind-dev texinfo
+            mkdir -p ${{ github.workspace }}/deps/build
+            mkdir -p ${{ github.workspace }}/deps/build/destdir
+            sudo ./BuildLinux.sh -ur
+            sudo chown $USER -R ./
+            ./BuildLinux.sh -dr
+            cd deps/build
+            tar -czvf OrcaSlicer_dep_ubuntu_$(date +"%Y%m%d").tar.gz destdir
 
       - name: Install Dependencies (Ubuntu 24.04)
         if: inputs.os == 'ubuntu-24.04'
@@ -108,14 +115,9 @@ jobs:
         if: inputs.os == 'ubuntu-20.04' || inputs.os == 'ubuntu-24.04'
         working-directory: ${{ github.workspace }}
         run: |
-            mkdir -p ${{ github.workspace }}/deps/build
-            mkdir -p ${{ github.workspace }}/deps/build/destdir
-            sudo ./BuildLinux.sh -ur
-            sudo chown $USER -R ./
-            ./BuildLinux.sh -dr
-            cd deps/build
-            tar -czvf OrcaSlicer_dep_ubuntu_$(date +"%Y%m%d").tar.gz destdir
-
+          mkdir -p ${{ github.workspace }}/deps/build
+          mkdir -p ${{ github.workspace }}/deps/build/destdir
+          sudo ./BuildLinux.sh -ur
 
       # Upload Artifacts
       - name: Upload Mac ${{ inputs.arch }} artifacts
@@ -138,7 +140,7 @@ jobs:
         with:
           name: OrcaSlicer_dep_ubuntu_${{ env.date }}
           path: ${{ github.workspace }}/deps/build/OrcaSlicer_dep_ubuntu_*.tar.gz
-
+      
       - name: Upload Ubuntu 24.04 artifacts
         if: ${{ ! env.ACT && inputs.os == 'ubuntu-24.04' }}
         uses: actions/upload-artifact@v4
