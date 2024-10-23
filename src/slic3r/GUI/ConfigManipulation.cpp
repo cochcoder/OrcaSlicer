@@ -754,17 +754,8 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig *config, co
     toggle_line("small_area_infill_flow_compensation_model", have_small_area_infill_flow_compensation);
 
     
-    toggle_field("seam_slope_type", !has_spiral_vase);
-    bool has_seam_slope = !has_spiral_vase && config->opt_enum<SeamScarfType>("seam_slope_type") != SeamScarfType::None;
-    toggle_line("seam_slope_conditional", has_seam_slope);
-    toggle_line("seam_slope_start_height", has_seam_slope);
-    toggle_line("seam_slope_entire_loop", has_seam_slope);
-    toggle_line("seam_slope_min_length", has_seam_slope);
-    toggle_line("seam_slope_steps", has_seam_slope);
-    toggle_line("seam_slope_inner_walls", has_seam_slope);
     toggle_line("scarf_joint_speed", has_seam_slope);
     toggle_line("scarf_joint_flow_ratio", has_seam_slope);
-    toggle_field("seam_slope_min_length", !config->opt_bool("seam_slope_entire_loop"));
     toggle_line("scarf_angle_threshold", has_seam_slope && config->opt_bool("seam_slope_conditional"));
     toggle_line("scarf_overhang_threshold", has_seam_slope && config->opt_bool("seam_slope_conditional"));
 

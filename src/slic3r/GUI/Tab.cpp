@@ -2020,14 +2020,11 @@ void TabPrint::build()
         optgroup->append_single_option_line("seam_position", "quality_settings_seam");
         optgroup->append_single_option_line("staggered_inner_seams", "quality_settings_seam");
         optgroup->append_single_option_line("seam_gap","quality_settings_seam");
-        optgroup->append_single_option_line("seam_slope_type", "seam#scarf-joint-seam");
         optgroup->append_single_option_line("seam_slope_conditional", "seam#scarf-joint-seam");
         optgroup->append_single_option_line("scarf_angle_threshold", "seam#scarf-joint-seam");
         optgroup->append_single_option_line("scarf_overhang_threshold", "seam#scarf-joint-seam");
         optgroup->append_single_option_line("scarf_joint_speed", "seam#scarf-joint-seam");
-        optgroup->append_single_option_line("seam_slope_start_height", "seam#scarf-joint-seam");
         optgroup->append_single_option_line("seam_slope_entire_loop", "seam#scarf-joint-seam");
-        optgroup->append_single_option_line("seam_slope_min_length", "seam#scarf-joint-seam");
         optgroup->append_single_option_line("seam_slope_steps", "seam#scarf-joint-seam");
         optgroup->append_single_option_line("scarf_joint_flow_ratio", "seam#scarf-joint-seam");
         optgroup->append_single_option_line("seam_slope_inner_walls", "seam#scarf-joint-seam");
@@ -3267,6 +3264,7 @@ void TabFilament::build()
         optgroup->append_single_option_line("filament_soluble");
         // BBS
         optgroup->append_single_option_line("filament_is_support");
+
         //optgroup->append_single_option_line("filament_colour");
         optgroup->append_single_option_line("required_nozzle_HRC");
         optgroup->append_single_option_line("default_filament_colour");
@@ -3276,6 +3274,7 @@ void TabFilament::build()
         optgroup->append_single_option_line("filament_shrink");
         optgroup->append_single_option_line("filament_shrinkage_compensation_z");
         optgroup->append_single_option_line("filament_cost");
+
         //BBS
         optgroup->append_single_option_line("temperature_vitrification");
         optgroup->append_single_option_line("idle_temperature");
@@ -3386,6 +3385,13 @@ void TabFilament::build()
         //BBS
         optgroup = page->new_optgroup(L("Volumetric speed limitation"), L"param_volumetric_speed");
         optgroup->append_single_option_line("filament_max_volumetric_speed");
+
+        // BBS
+        optgroup = page->new_optgroup(L("Filament scarf seam settings"), L"param_volumetric_speed");
+        optgroup->append_single_option_line("filament_scarf_seam_type");
+        optgroup->append_single_option_line("filament_scarf_height");
+        optgroup->append_single_option_line("filament_scarf_gap");
+        optgroup->append_single_option_line("filament_scarf_length");
 
         //line = { "", "" };
         //line.full_width = 1;

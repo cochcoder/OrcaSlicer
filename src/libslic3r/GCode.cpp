@@ -4580,8 +4580,9 @@ std::string GCode::extrude_loop(ExtrusionLoop loop, std::string description, dou
     } else
         loop.split_at(last_pos, false);
 
-    const auto seam_scarf_type = m_config.seam_slope_type.value;
-    bool enable_seam_slope = ((seam_scarf_type == SeamScarfType::External && !is_hole) || seam_scarf_type == SeamScarfType::All) &&
+    int  filament_scarf_type = EXTRUDER_CONFIG(filament_scarf_seam_type);
+    bool enable_seam_slope   = (filament_scarf_type == int(SeamScarfType::External) && !is_hole) ||
+        filament_scarf_type == int(SeamScarfType::All) &&
         !m_config.spiral_mode &&
         (loop.role() == erExternalPerimeter || (loop.role() == erPerimeter && m_config.seam_slope_inner_walls)) &&
         layer_id() > 0;
@@ -4727,14 +4728,16 @@ std::string GCode::extrude_loop(ExtrusionLoop loop, std::string description, dou
         }
     } else {
         // Create seam slope
-        double start_slope_ratio;
-        if (m_config.seam_slope_start_height.percent) {
-            start_slope_ratio = m_config.seam_slope_start_height.value / 100.;
-        } else {
-            // Get the ratio against current layer height
-            double h = paths.front().height;
-            start_slope_ratio = m_config.seam_slope_start_height.value / h;
+        if (EXTRUDER_CONFIG(filament_scarf_height).percent)
+            start_slope_ratio = EXTRUDER_CONFIG(filament_scarf_height).value / 100;
+        else {
+            start_slope_ratio = EXTRUDER_CONFIG(filament_scarf_height).value / paths.front().height;
         }
+
+        float slope_gap = EXTRUDER_CONFIG(filament_scarf_gap).get_abs_value(scale_(EXTRUDER_CONFIG(nozzle_diameter)));
+
+        double scarf_seam_length = EXTRUDER_CONFIG(filament_scarf_length);
+
         if (start_slope_ratio >= 1)
             start_slope_ratio = 0.99;
 
@@ -4744,7 +4747,7 @@ std::string GCode::extrude_loop(ExtrusionLoop loop, std::string description, dou
         }
 
         const bool   slope_entire_loop        = m_config.seam_slope_entire_loop;
-        const double slope_min_length         = slope_entire_loop ? loop_length : std::min(m_config.seam_slope_min_length.value, loop_length);
+        const double slope_min_length         = slope_entire_loop ? loop_length : std::min(scarf_seam_length, loop_length);
         const int    slope_steps              = m_config.seam_slope_steps;
         const double slope_max_segment_length = scale_(slope_min_length / slope_steps);
 

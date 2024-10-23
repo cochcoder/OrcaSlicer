@@ -2151,6 +2151,44 @@ void PrintConfigDef::init_fff_params()
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionBools { false });
 
+    def = this->add("filament_scarf_seam_type", coEnums);
+    def->label = L("Scarf seam type");
+    def->tooltip = L("Set scarf seam type for this filament. This setting could minimize seam visibiliy.");
+    def->enum_keys_map = &ConfigOptionEnum<SeamScarfType>::get_enum_values();
+    def->enum_values.push_back("none");
+    def->enum_values.push_back("external");
+    def->enum_values.push_back("all");
+    def->enum_labels.push_back(L("None"));
+    def->enum_labels.push_back(L("Contour"));
+    def->enum_labels.push_back(L("Contour and hole"));
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionEnumsGeneric{0});
+
+    def = this->add("filament_scarf_height", coFloatsOrPercents);
+    def->label = L("Scarf start height");
+    def->tooltip = L("This amount can be specified in millimeters or as a percentage of the current layer height.");
+    def->ratio_over = "layer_height";
+    def->sidetext   = L("mm/%");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloatsOrPercents{FloatOrPercent( 0, 10)});
+
+    def = this->add("filament_scarf_gap", coFloatsOrPercents);
+    def->label = L("Scarf slope gap");
+    def->tooltip = L("In order to reduce the visiblity of the seam in closed loop, the inner wall and outer wall are shortened by a specified amount.");
+    def->min = 0;
+    def->ratio_over = "nozzle_diameter";
+    def->sidetext   = L("mm/%");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloatsOrPercents{FloatOrPercent(0, 0)});
+
+    def = this->add("filament_scarf_length", coFloats);
+    def->label = L("Scarf length");
+    def->tooltip = L("Length of the scarf. Setting this parameter to zero effectively disables the scarf.");
+    def->min = 0;
+    def->sidetext = "mm";
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloats{10});
+
     def = this->add("filament_is_support", coBools);
     def->label = L("Support material");
     def->tooltip = L("Support material is commonly used to print support and support interface");
@@ -3913,19 +3951,6 @@ void PrintConfigDef::init_fff_params()
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloatOrPercent(10,true));
 
-    def = this->add("seam_slope_type", coEnum);
-    def->label = L("Scarf joint seam (beta)");
-    def->tooltip = L("Use scarf joint to minimize seam visibility and increase seam strength.");
-    def->enum_keys_map = &ConfigOptionEnum<SeamScarfType>::get_enum_values();
-    def->enum_values.push_back("none");
-    def->enum_values.push_back("external");
-    def->enum_values.push_back("all");
-    def->enum_labels.push_back(L("None"));
-    def->enum_labels.push_back(L("Contour"));
-    def->enum_labels.push_back(L("Contour and hole"));
-    def->mode = comAdvanced;
-    def->set_default_value(new ConfigOptionEnum<SeamScarfType>(SeamScarfType::None));
-
     def = this->add("seam_slope_conditional", coBool);
     def->label = L("Conditional scarf joint");
     def->tooltip = L("Apply scarf joints only to smooth perimeters where traditional seams do not conceal the seams at sharp corners effectively.");
@@ -3976,29 +4001,11 @@ void PrintConfigDef::init_fff_params()
     def->max = 2;
     def->set_default_value(new ConfigOptionFloat(1));
 
-    def = this->add("seam_slope_start_height", coFloatOrPercent);
-    def->label = L("Scarf start height");
-    def->tooltip = L("Start height of the scarf.\n"
-                     "This amount can be specified in millimeters or as a percentage of the current layer height. The default value for this parameter is 0.");
-    def->sidetext = L("mm or %");
-    def->ratio_over = "layer_height";
-    def->min = 0;
-    def->mode = comAdvanced;
-    def->set_default_value(new ConfigOptionFloatOrPercent(0, false));
-
     def = this->add("seam_slope_entire_loop", coBool);
     def->label = L("Scarf around entire wall");
     def->tooltip = L("The scarf extends to the entire length of the wall.");
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionBool(false));
-
-    def = this->add("seam_slope_min_length", coFloat);
-    def->label = L("Scarf length");
-    def->tooltip = L("Length of the scarf. Setting this parameter to zero effectively disables the scarf.");
-    def->sidetext = L("mm");
-    def->min = 0;
-    def->mode = comAdvanced;
-    def->set_default_value(new ConfigOptionFloat(20));
 
     def = this->add("seam_slope_steps", coInt);
     def->label = L("Scarf steps");
@@ -6255,6 +6262,7 @@ void PrintConfigDef::handle_legacy(t_config_option_key &opt_key, std::string &va
         "can_switch_nozzle_type", "can_add_auxiliary_fan", "extra_flush_volume", "spaghetti_detector", "adaptive_layer_height",
         "z_hop_type", "z_lift_type", "bed_temperature_difference","long_retraction_when_cut",
         "retraction_distance_when_cut",
+        "seam_slope_type","seam_slope_start_height","seam_slope_gap", "seam_slope_min_length"
         "extruder_type",
         "internal_bridge_support_thickness","extruder_clearance_max_radius", "top_area_threshold", "reduce_wall_solid_infill","filament_load_time","filament_unload_time",
         "smooth_coefficient", "overhang_totally_speed"

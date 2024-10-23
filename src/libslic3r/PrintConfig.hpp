@@ -161,7 +161,7 @@ enum SeamPosition {
 
 // Orca
 enum class SeamScarfType {
-    None,
+    None = 0,
     External,
     All,
 };
@@ -988,12 +988,12 @@ PRINT_CONFIG_CLASS_DEFINE(
     ((ConfigOptionEnum<WallDirection>,  wall_direction))
 
     // Orca: seam slopes
-    ((ConfigOptionEnum<SeamScarfType>,  seam_slope_type))
+    //((ConfigOptionEnum<SeamScarfType>,  seam_slope_type))
     ((ConfigOptionBool,                 seam_slope_conditional))
     ((ConfigOptionInt,                  scarf_angle_threshold))
-    ((ConfigOptionFloatOrPercent,       seam_slope_start_height))
+    //((ConfigOptionFloatOrPercent,       seam_slope_start_height))
     ((ConfigOptionBool,                 seam_slope_entire_loop))
-    ((ConfigOptionFloat,                seam_slope_min_length))
+    //((ConfigOptionFloat,                seam_slope_min_length))
     ((ConfigOptionInt,                  seam_slope_steps))
     ((ConfigOptionBool,                 seam_slope_inner_walls))
     ((ConfigOptionFloatOrPercent,       scarf_joint_speed))
@@ -1063,6 +1063,10 @@ PRINT_CONFIG_CLASS_DEFINE(
     ((ConfigOptionStrings,             filament_type))
     ((ConfigOptionBools,               filament_soluble))
     ((ConfigOptionBools,               filament_is_support))
+    ((ConfigOptionEnumsGeneric,        filament_scarf_seam_type))
+    ((ConfigOptionFloatsOrPercents,    filament_scarf_height))
+    ((ConfigOptionFloatsOrPercents,    filament_scarf_gap))
+    ((ConfigOptionFloats,              filament_scarf_length))
     ((ConfigOptionFloats,              filament_cost))
     ((ConfigOptionStrings,             default_filament_colour))
     ((ConfigOptionInts,                temperature_vitrification))  //BBS
