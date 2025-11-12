@@ -682,15 +682,14 @@ find_package(PNG REQUIRED)
 set(OpenGL_GL_PREFERENCE "LEGACY")
 find_package(OpenGL REQUIRED)
 
-set(GLEW_ROOT "${CMAKE_PREFIX_PATH}")
-message("GLEW_ROOT: ${GLEW_ROOT}")
-# Find glew or use bundled version
-if (SLIC3R_STATIC AND NOT SLIC3R_STATIC_EXCLUDE_GLEW)
-    set(GLEW_USE_STATIC_LIBS ON)
-    set(GLEW_VERBOSE ON)
+# Find GLAD (OpenGL loader)
+find_package(glad QUIET)
+if (NOT glad_FOUND)
+    # Use bundled GLAD
+    message(STATUS "Using bundled GLAD")
+    add_subdirectory(${CMAKE_PREFIX_PATH}/../../../deps/GLAD/glad ${CMAKE_BINARY_DIR}/GLAD)
+    set(GLAD_LIBRARIES GLAD)
 endif()
-
-find_package(GLEW REQUIRED)
 
 find_package(glfw3 REQUIRED)
 
