@@ -2,7 +2,7 @@
 #include <libslic3r/Utils.hpp>
 #include <libslic3r/SLAPrint.hpp>
 
-#include <GL/glew.h>
+#include <glad/gl.h>
 
 #include <boost/log/trivial.hpp>
 
