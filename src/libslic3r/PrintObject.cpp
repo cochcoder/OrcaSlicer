@@ -3936,13 +3936,18 @@ void PrintObject::_generate_support_material()
     if (is_tree(m_config.support_type.value)) {
 #ifdef HAS_RUST_TREE_SUPPORTS
         // Use Rust tree support generation via FFI
+        if (m_model_object->volumes.empty()) {
+            BOOST_LOG_TRIVIAL(error) << "Tree support generation: model object has no volumes";
+            return;
+        }
+
         TreeSupportConfig cfg = {};
         cfg.layer_height = scaled<int64_t>(m_slicing_params.layer_height);
         cfg.support_angle = m_config.support_angle.value * M_PI / 180.0;
         cfg.support_tree_angle = m_config.tree_support_branch_angle.value * M_PI / 180.0;
         cfg.support_tree_branch_diameter = scaled<int64_t>(m_config.tree_support_branch_diameter.value);
 
-        // Get mesh data
+        // Convert mesh to flat arrays for FFI
         const indexed_triangle_set &its = m_model_object->volumes.front()->mesh().its;
         std::vector<float> vertices;
         vertices.reserve(its.vertices.size() * 3);
@@ -3969,12 +3974,23 @@ void PrintObject::_generate_support_material()
         if (handle) {
             SupportOutput *output = orca_tree_support_generate(handle);
             if (output && output->success) {
-                // Output generated successfully — support layers are in output->layers
-                // TODO: Convert output polygons to SupportLayer objects
+                // Convert Rust output to SupportLayer objects
+                for (uint32_t i = 0; i < output->layer_count; i++) {
+                    const auto &layer = output->layers[i];
+                    coordf_t print_z = unscaled<coordf_t>(layer.z);
+                    coordf_t height = (i > 0) ? print_z - unscaled<coordf_t>(output->layers[i - 1].z) : print_z;
+                    add_tree_support_layer(static_cast<int>(i), height, print_z, print_z - 0.5 * height);
+                }
+            } else if (output && !output->success) {
+                BOOST_LOG_TRIVIAL(error) << "Rust tree support generation failed";
+            } else {
+                BOOST_LOG_TRIVIAL(error) << "Rust tree support generation returned null output";
             }
             if (output)
                 orca_tree_support_destroy_output(output);
             orca_tree_support_destroy_handle(handle);
+        } else {
+            BOOST_LOG_TRIVIAL(error) << "Failed to create Rust tree support handle";
         }
 #else
         // Rust tree supports not available — no tree support generation
