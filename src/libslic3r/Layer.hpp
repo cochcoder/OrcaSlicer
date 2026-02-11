@@ -296,7 +296,6 @@ public:
 
 protected:
     friend class PrintObject;
-    friend class TreeSupport;
 
     // The constructor has been made public to be able to insert additional support layers for the skirt or a wipe tower
     // between the raft and the object first layer.

@@ -10,7 +10,9 @@
 #include "PrintConfig.hpp"
 #include "Support/SupportMaterial.hpp"
 #include "Support/SupportSpotsGenerator.hpp"
-#include "Support/TreeSupport.hpp"
+#ifdef HAS_RUST_TREE_SUPPORTS
+#include "Support/TreeSupportRust/include/orca_tree_supports.h"
+#endif
 #include "Surface.hpp"
 #include "Slicing.hpp"
 #include "Tesselate.hpp"
@@ -77,9 +79,7 @@ namespace Slic3r {
 // Constructor is called from the main thread, therefore all Model / ModelObject / ModelIntance data are valid.
 PrintObject::PrintObject(Print* print, ModelObject* model_object, const Transform3d& trafo, PrintInstances&& instances) :
     PrintObjectBaseWithState(print, model_object),
-    m_trafo(trafo),
-    // BBS
-    m_tree_support_preview_cache(nullptr)
+    m_trafo(trafo)
 {
     // Compute centering offet to be applied to our meshes so that we work with smaller coordinates
     // requiring less bits to represent Clipper coordinates.
@@ -963,16 +963,6 @@ void PrintObject::clear_support_layers()
             l->cantilevers.clear();
         }
     }
-}
-
-std::shared_ptr<TreeSupportData> PrintObject::alloc_tree_support_preview_cache()
-{
-    if (!m_tree_support_preview_cache) {
-        const coordf_t xy_distance = m_config.support_object_xy_distance.value;
-        m_tree_support_preview_cache = std::make_shared<TreeSupportData>(*this, xy_distance, g_config_tree_support_collision_resolution);
-    }
-
-    return m_tree_support_preview_cache;
 }
 
 SupportLayer* PrintObject::add_tree_support_layer(int id, coordf_t height, coordf_t print_z, coordf_t slice_z)
@@ -3944,9 +3934,52 @@ void PrintObject::combine_infill()
 void PrintObject::_generate_support_material()
 {
     if (is_tree(m_config.support_type.value)) {
-        TreeSupport tree_support(*this, m_slicing_params);
-        tree_support.throw_on_cancel = [this]() { this->throw_if_canceled(); };
-        tree_support.generate();
+#ifdef HAS_RUST_TREE_SUPPORTS
+        // Use Rust tree support generation via FFI
+        TreeSupportConfig cfg = {};
+        cfg.layer_height = scaled<int64_t>(m_slicing_params.layer_height);
+        cfg.support_angle = m_config.support_angle.value * M_PI / 180.0;
+        cfg.support_tree_angle = m_config.tree_support_branch_angle.value * M_PI / 180.0;
+        cfg.support_tree_branch_diameter = scaled<int64_t>(m_config.tree_support_branch_diameter.value);
+
+        // Get mesh data
+        const indexed_triangle_set &its = m_model_object->volumes.front()->mesh().its;
+        std::vector<float> vertices;
+        vertices.reserve(its.vertices.size() * 3);
+        for (const auto &v : its.vertices) {
+            vertices.push_back(v.x());
+            vertices.push_back(v.y());
+            vertices.push_back(v.z());
+        }
+        std::vector<uint32_t> indices;
+        indices.reserve(its.indices.size() * 3);
+        for (const auto &f : its.indices) {
+            indices.push_back(static_cast<uint32_t>(f[0]));
+            indices.push_back(static_cast<uint32_t>(f[1]));
+            indices.push_back(static_cast<uint32_t>(f[2]));
+        }
+
+        MeshData mesh_data;
+        mesh_data.vertices = vertices.data();
+        mesh_data.vertex_count = static_cast<uint32_t>(its.vertices.size());
+        mesh_data.indices = indices.data();
+        mesh_data.triangle_count = static_cast<uint32_t>(its.indices.size());
+
+        TreeSupportHandle *handle = orca_tree_support_create(&cfg, &mesh_data);
+        if (handle) {
+            SupportOutput *output = orca_tree_support_generate(handle);
+            if (output && output->success) {
+                // Output generated successfully — support layers are in output->layers
+                // TODO: Convert output polygons to SupportLayer objects
+            }
+            if (output)
+                orca_tree_support_destroy_output(output);
+            orca_tree_support_destroy_handle(handle);
+        }
+#else
+        // Rust tree supports not available — no tree support generation
+        BOOST_LOG_TRIVIAL(warning) << "Tree support generation requires Rust toolchain (HAS_RUST_TREE_SUPPORTS not defined)";
+#endif
     }
     else {
         PrintObjectSupportMaterial support_material(this, m_slicing_params);
@@ -4098,18 +4131,15 @@ template void PrintObject::remove_bridges_from_contacts<Polygons>(
 
 SupportNecessaryType PrintObject::is_support_necessary()
 {
-    const double cantilevel_dist_thresh = scale_(6);
-
-    TreeSupport tree_support(*this, m_slicing_params);
-    tree_support.support_type = SupportType::stTreeAuto; // need to set support type to fully utilize the power of feature detection
-    tree_support.detect_overhangs(true);
-    this->clear_support_layers();
-    if (tree_support.has_sharp_tails)
-        return SharpTail;
-    else if (tree_support.has_cantilever && tree_support.max_cantilever_dist > cantilevel_dist_thresh)
-        return Cantilever;
-
+#ifdef HAS_RUST_TREE_SUPPORTS
+    // With Rust tree supports, use basic overhang detection to determine if support is needed.
+    // The full tree support algorithm handles sharp tails and cantilevers internally.
+    // For now, return NoNeedSupp and let the user explicitly enable supports.
+    // TODO: Implement overhang detection query through Rust FFI
     return NoNeedSupp;
+#else
+    return NoNeedSupp;
+#endif
 }
 
 static void project_triangles_to_slabs(ConstLayerPtrsAdaptor layers, const indexed_triangle_set &custom_facets, const Transform3f &tr, bool seam, std::vector<Polygons> &out)

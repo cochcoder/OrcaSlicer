@@ -423,13 +423,6 @@ set(lisbslic3r_sources
     Support/SupportParameters.hpp
     Support/SupportSpotsGenerator.cpp
     Support/SupportSpotsGenerator.hpp
-    Support/TreeModelVolumes.cpp
-    Support/TreeModelVolumes.hpp
-    Support/TreeSupport3D.cpp
-    Support/TreeSupport3D.hpp
-    Support/TreeSupportCommon.hpp
-    Support/TreeSupport.cpp
-    Support/TreeSupport.hpp
     SurfaceCollection.cpp
     SurfaceCollection.hpp
     Surface.cpp
