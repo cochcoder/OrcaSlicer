@@ -4,10 +4,6 @@
 #include <ostream>
 #include <new>
 
-/// The scaling factor used to convert between millimetres and internal integer
-/// coordinates. Matches the C++ `SCALING_FACTOR` constant.
-constexpr static const double SCALING_FACTOR = 1e-6;
-
 /// How interface areas interact with support areas.
 ///
 /// Mirrors the C++ `InterfacePreference` enum.

@@ -39,6 +39,7 @@ pub type CoordF = f64;
 
 /// The scaling factor used to convert between millimetres and internal integer
 /// coordinates. Matches the C++ `SCALING_FACTOR` constant.
+/// cbindgen:ignore
 pub const SCALING_FACTOR: f64 = 1e-6;
 
 /// Convert millimetres to internal scaled coordinates.
