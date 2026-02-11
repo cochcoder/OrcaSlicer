@@ -298,7 +298,7 @@ fn drop_single_branch(
         nodes.push(node);
     }
 
-    let reaches_buildplate = !nodes.is_empty() && nodes.last().is_some_and(|n| n.layer_index == 0);
+    let reaches_buildplate = nodes.last().is_some_and(|n| n.layer_index == 0);
 
     Branch {
         nodes,
