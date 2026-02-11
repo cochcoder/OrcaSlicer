@@ -423,13 +423,6 @@ set(lisbslic3r_sources
     Support/SupportParameters.hpp
     Support/SupportSpotsGenerator.cpp
     Support/SupportSpotsGenerator.hpp
-    Support/TreeModelVolumes.cpp
-    Support/TreeModelVolumes.hpp
-    Support/TreeSupport3D.cpp
-    Support/TreeSupport3D.hpp
-    Support/TreeSupportCommon.hpp
-    Support/TreeSupport.cpp
-    Support/TreeSupport.hpp
     SurfaceCollection.cpp
     SurfaceCollection.hpp
     Surface.cpp
@@ -485,6 +478,9 @@ add_library(libslic3r STATIC ${lisbslic3r_sources}
     "${CMAKE_CURRENT_BINARY_DIR}/libslic3r_version.h"
     ${OpenVDBUtils_SOURCES})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${lisbslic3r_sources})
+
+# Rust tree support library (optional — requires cargo/Rust toolchain)
+add_subdirectory(Support/TreeSupportRust)
 
 if (SLIC3R_STATIC)
     set(CGAL_Boost_USE_STATIC_LIBS ON CACHE BOOL "" FORCE)
@@ -602,6 +598,13 @@ target_link_libraries(libslic3r
         ZLIB::ZLIB
         OpenSSL::Crypto
     )
+
+# Link Rust tree support library if cargo/Rust toolchain is available
+if(TARGET orca_tree_supports)
+    target_link_libraries(libslic3r PRIVATE orca_tree_supports)
+    target_compile_definitions(libslic3r PRIVATE HAS_RUST_TREE_SUPPORTS=1)
+    message(STATUS "Rust tree support library enabled")
+endif()
 
 if(NOT WIN32)
     # Link freetype for OCCT dependency (CAD operations need font rendering)

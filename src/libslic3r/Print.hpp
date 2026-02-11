@@ -35,8 +35,6 @@ class Print;
 class PrintObject;
 class SupportLayer;
 // BBS
-class TreeSupportData;
-class TreeSupport;
 class ExtrusionLayers;
 
 #define MAX_OUTER_NOZZLE_DIAMETER   4
@@ -397,8 +395,6 @@ public:
 
     // BBS
     SupportLayer* add_tree_support_layer(int id, coordf_t height, coordf_t print_z, coordf_t slice_z);
-    std::shared_ptr<TreeSupportData> alloc_tree_support_preview_cache();
-    void clear_tree_support_preview_cache() { m_tree_support_preview_cache.reset(); }
 
     size_t          support_layer_count() const { return m_support_layers.size(); }
     void            clear_support_layers();
@@ -555,8 +551,6 @@ private:
     SlicingParameters                       m_slicing_params;
     LayerPtrs                               m_layers;
     SupportLayerPtrs                        m_support_layers;
-    // BBS
-    std::shared_ptr<TreeSupportData>        m_tree_support_preview_cache;
 
     // this is set to true when LayerRegion->slices is split in top/internal/bottom
     // so that next call to make_perimeters() performs a union() before computing loops
