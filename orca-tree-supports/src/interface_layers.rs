@@ -108,12 +108,8 @@ pub fn generate_interface_layers(
                     16, // segments
                 );
 
-                // Compute fill angle with rotation per layer.
-                let base_angle = if !config.support_roof_enable {
-                    0.0
-                } else {
-                    std::f64::consts::PI / 4.0 // 45° default
-                };
+                // Compute fill angle with rotation per layer (45° base, rotating 30° per layer).
+                let base_angle = std::f64::consts::PI / 4.0;
                 let fill_angle = base_angle + (i as f64) * std::f64::consts::PI / 6.0;
 
                 roof_layers.push(InterfaceLayer {

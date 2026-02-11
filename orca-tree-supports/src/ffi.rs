@@ -73,13 +73,10 @@ pub unsafe extern "C" fn orca_tree_support_create(
         return std::ptr::null_mut();
     }
 
-    let config = match std::ptr::read(config).validate() {
-        Ok(()) => std::ptr::read(config),
-        Err(_) => {
-            // Re-read since validate consumed it conceptually.
-            return std::ptr::null_mut();
-        }
-    };
+    let config = std::ptr::read(config);
+    if let Err(_) = config.validate() {
+        return std::ptr::null_mut();
+    }
 
     let mesh_ref = &*mesh;
     let triangle_mesh = match TriangleMesh::from_ffi(mesh_ref) {
