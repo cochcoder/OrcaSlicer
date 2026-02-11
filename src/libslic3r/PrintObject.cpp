@@ -3941,11 +3941,56 @@ void PrintObject::_generate_support_material()
             return;
         }
 
+        // Default values for tree support parameters not exposed in OrcaSlicer UI
+        constexpr double TREE_SUPPORT_RESOLUTION_MM            = 0.025;
+        constexpr double TREE_SUPPORT_MIN_FEATURE_SIZE_MM      = 0.1;
+        constexpr double TREE_SUPPORT_XY_OVERHANGS_MM          = 0.2;
+        constexpr double TREE_SUPPORT_INTERFACE_SKIP_HEIGHT_MM = 0.3;
+        constexpr double TREE_SUPPORT_BP_DIAMETER_MM           = 7.5;   // buildplate contact diameter
+        constexpr double TREE_SUPPORT_MIN_BOTTOM_AREA_MM       = 1.0;
+        constexpr double TREE_SUPPORT_MAX_DIAMETER_INCREASE_MM = 1.0;   // max diameter increase per merge
+        constexpr double TREE_SUPPORT_MIN_HEIGHT_TO_MODEL_MM   = 1.0;
+
+        // Populate tree support config from OrcaSlicer print settings
         TreeSupportConfig cfg = {};
-        cfg.layer_height = scaled<int64_t>(m_slicing_params.layer_height);
-        cfg.support_angle = m_config.support_angle.value * M_PI / 180.0;
-        cfg.support_tree_angle = m_config.tree_support_branch_angle.value * M_PI / 180.0;
-        cfg.support_tree_branch_diameter = scaled<int64_t>(m_config.tree_support_branch_diameter.value);
+        cfg.layer_height                    = scaled<int64_t>(m_slicing_params.layer_height);
+        cfg.resolution                      = scaled<int64_t>(TREE_SUPPORT_RESOLUTION_MM);
+        cfg.min_feature_size                = scaled<int64_t>(TREE_SUPPORT_MIN_FEATURE_SIZE_MM);
+        cfg.support_angle                   = m_config.support_angle.value * M_PI / 180.0;
+        cfg.support_line_width              = scaled<int64_t>(m_config.support_line_width.get_abs_value(m_config.line_width.value));
+        cfg.support_roof_line_width         = scaled<int64_t>(m_config.support_line_width.get_abs_value(m_config.line_width.value));
+        cfg.support_bottom_enable           = m_config.support_interface_bottom_layers.value > 0;
+        cfg.support_bottom_height           = scaled<int64_t>(m_config.support_bottom_z_distance.value);
+        cfg.support_material_buildplate_only = m_config.support_on_build_plate_only.value;
+        cfg.support_xy_distance             = scaled<int64_t>(m_config.support_object_xy_distance.value);
+        cfg.support_xy_distance_first_layer = scaled<int64_t>(m_config.support_object_xy_distance.value);
+        cfg.support_xy_distance_overhang    = scaled<int64_t>(TREE_SUPPORT_XY_OVERHANGS_MM);
+        cfg.support_top_distance            = scaled<int64_t>(m_config.support_top_z_distance.value);
+        cfg.support_bottom_distance         = scaled<int64_t>(m_config.support_bottom_z_distance.value);
+        cfg.support_interface_skip_height   = scaled<int64_t>(TREE_SUPPORT_INTERFACE_SKIP_HEIGHT_MM);
+        cfg.support_roof_enable             = m_config.support_interface_top_layers.value > 0;
+        cfg.support_roof_layers             = static_cast<int32_t>(m_config.support_interface_top_layers.value);
+        cfg.support_floor_enable            = m_config.support_interface_bottom_layers.value > 0;
+        cfg.support_floor_layers            = static_cast<int32_t>(m_config.support_interface_bottom_layers.value);
+        cfg.minimum_roof_area               = 0.0; // no minimum, generate roof for all contact areas
+        cfg.support_line_spacing            = scaled<int64_t>(m_config.support_base_pattern_spacing.value);
+        cfg.support_bottom_offset           = 0;   // no offset for bottom support layers
+        cfg.support_wall_count              = static_cast<int32_t>(m_config.tree_support_wall_count.value);
+        cfg.support_roof_line_distance      = cfg.support_line_width;
+        cfg.minimum_support_area            = 0;   // no minimum, generate support for all detected overhangs
+        cfg.minimum_bottom_area             = scaled<int64_t>(TREE_SUPPORT_MIN_BOTTOM_AREA_MM);
+        cfg.support_offset                  = 0;   // no additional polygon offset
+        cfg.support_tree_angle              = m_config.tree_support_branch_angle.value * M_PI / 180.0;
+        cfg.support_tree_angle_slow         = m_config.tree_support_angle_slow.value * M_PI / 180.0;
+        cfg.support_tree_branch_diameter    = scaled<int64_t>(m_config.tree_support_branch_diameter.value);
+        cfg.support_tree_branch_diameter_angle = m_config.tree_support_branch_diameter_angle.value * M_PI / 180.0;
+        cfg.support_tree_branch_distance    = scaled<int64_t>(m_config.tree_support_branch_distance.value);
+        cfg.support_tree_bp_diameter        = scaled<int64_t>(TREE_SUPPORT_BP_DIAMETER_MM);
+        cfg.support_tree_top_rate           = m_config.tree_support_top_rate.value;
+        cfg.support_tree_tip_diameter       = scaled<int64_t>(m_config.tree_support_tip_diameter.value);
+        cfg.support_tree_max_diameter_increase_by_merges_when_support_to_model = scaled<int64_t>(TREE_SUPPORT_MAX_DIAMETER_INCREASE_MM);
+        cfg.support_tree_min_height_to_model = scaled<int64_t>(TREE_SUPPORT_MIN_HEIGHT_TO_MODEL_MM);
+        cfg.support_rests_on_model          = !m_config.support_on_build_plate_only.value;
 
         // Convert mesh to flat arrays for FFI
         const indexed_triangle_set &its = m_model_object->volumes.front()->mesh().its;
@@ -3975,10 +4020,11 @@ void PrintObject::_generate_support_material()
             SupportOutput *output = orca_tree_support_generate(handle);
             if (output && output->success) {
                 // Convert Rust output to SupportLayer objects
+                // Note: layer.z is already in millimeters (not scaled)
                 for (uint32_t i = 0; i < output->layer_count; i++) {
                     const auto &layer = output->layers[i];
-                    coordf_t print_z = unscaled<coordf_t>(layer.z);
-                    coordf_t height = (i > 0) ? print_z - unscaled<coordf_t>(output->layers[i - 1].z) : print_z;
+                    coordf_t print_z = layer.z;
+                    coordf_t height = (i > 0) ? print_z - output->layers[i - 1].z : print_z;
                     add_tree_support_layer(static_cast<int>(i), height, print_z, print_z - 0.5 * height);
                 }
             } else if (output && !output->success) {
