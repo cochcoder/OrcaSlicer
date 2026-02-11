@@ -21,20 +21,15 @@ use smallvec::SmallVec;
 /// Type of tree node geometry.
 ///
 /// Mirrors the C++ `TreeNodeType` enum.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum NodeType {
     /// Circular cross-section (default for most branches).
+    #[default]
     Circle,
     /// Square cross-section (used at certain junctions).
     Square,
     /// Polygon cross-section (for complex shapes).
     Polygon,
-}
-
-impl Default for NodeType {
-    fn default() -> Self {
-        Self::Circle
-    }
 }
 
 /// A single node in the support tree.
@@ -303,7 +298,7 @@ fn drop_single_branch(
         nodes.push(node);
     }
 
-    let reaches_buildplate = !nodes.is_empty() && nodes.last().map_or(false, |n| n.layer_index == 0);
+    let reaches_buildplate = !nodes.is_empty() && nodes.last().is_some_and(|n| n.layer_index == 0);
 
     Branch {
         nodes,

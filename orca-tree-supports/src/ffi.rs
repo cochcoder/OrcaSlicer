@@ -74,7 +74,7 @@ pub unsafe extern "C" fn orca_tree_support_create(
     }
 
     let config = std::ptr::read(config);
-    if let Err(_) = config.validate() {
+    if config.validate().is_err() {
         return std::ptr::null_mut();
     }
 
