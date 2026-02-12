@@ -12,6 +12,8 @@
 #include "Support/SupportSpotsGenerator.hpp"
 #ifdef HAS_RUST_TREE_SUPPORTS
 #include "Support/TreeSupportRust/include/orca_tree_supports.h"
+#include "Support/SupportCommon.hpp"
+#include "Support/SupportParameters.hpp"
 #endif
 #include "Surface.hpp"
 #include "Slicing.hpp"
@@ -4018,15 +4020,44 @@ void PrintObject::_generate_support_material()
         TreeSupportHandle *handle = orca_tree_support_create(&cfg, &mesh_data);
         if (handle) {
             SupportOutput *output = orca_tree_support_generate(handle);
-            if (output && output->success) {
-                // Convert Rust output to SupportLayer objects
-                // Note: layer.z is already in millimeters (not scaled)
+            if (output && output->success && output->layer_count > 0) {
+                // Set up support parameters and flow for extrusion generation
+                SupportParameters support_params(*this);
+                Flow support_flow = Slic3r::support_material_flow(this, float(m_slicing_params.layer_height));
+
+                // Convert Rust output to SupportLayer objects with polygon data
                 for (uint32_t i = 0; i < output->layer_count; i++) {
                     const auto &layer = output->layers[i];
                     coordf_t print_z = layer.z;
                     coordf_t height = (i > 0) ? print_z - output->layers[i - 1].z : print_z;
-                    add_tree_support_layer(static_cast<int>(i), height, print_z, print_z - 0.5 * height);
+                    SupportLayer *support_layer = add_tree_support_layer(static_cast<int>(i), height, print_z, print_z - 0.5 * height);
+
+                    // Convert Rust polygon data to Slic3r Polygons
+                    Polygons polygons;
+                    if (layer.polygon_count > 0 && layer.polygon_points != nullptr && layer.polygon_sizes != nullptr) {
+                        uint32_t point_offset = 0;
+                        for (uint32_t p = 0; p < layer.polygon_count; p++) {
+                            uint32_t poly_size = layer.polygon_sizes[p];
+                            Polygon polygon;
+                            polygon.points.reserve(poly_size);
+                            for (uint32_t j = 0; j < poly_size; j++) {
+                                const auto &pt = layer.polygon_points[point_offset + j];
+                                polygon.points.emplace_back(static_cast<coord_t>(pt.x), static_cast<coord_t>(pt.y));
+                            }
+                            point_offset += poly_size;
+                            if (!polygon.points.empty())
+                                polygons.push_back(std::move(polygon));
+                        }
+                    }
+
+                    if (!polygons.empty()) {
+                        // Store as base_areas for retraction suppression
+                        support_layer->base_areas = union_ex(polygons);
+                        // Generate extrusion fills for G-code output
+                        tree_supports_generate_paths(support_layer->support_fills.entities, polygons, support_flow, support_params);
+                    }
                 }
+                BOOST_LOG_TRIVIAL(info) << "Rust tree support generated " << output->layer_count << " layers, " << output->branch_count << " branches";
             } else if (output && !output->success) {
                 BOOST_LOG_TRIVIAL(error) << "Rust tree support generation failed";
             } else {
