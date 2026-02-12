@@ -4070,8 +4070,13 @@ void PrintObject::_generate_support_material()
                     }
 
                     if (!polygons.empty()) {
-                        // Store as base_areas for retraction suppression
-                        support_layer->base_areas = union_ex(polygons);
+                        // Store polygon coverage as support_islands (used by rendering,
+                        // retraction suppression, avoid-crossing-perimeters and brim).
+                        support_layer->support_islands = union_ex(polygons);
+                        // Also store as base_areas for tree-support-specific retraction checks.
+                        support_layer->base_areas = support_layer->support_islands;
+                        // lslices is used by brim generation and first-layer island detection for tree supports
+                        support_layer->lslices = support_layer->support_islands;
                         // Generate extrusion fills for G-code output
                         tree_supports_generate_paths(support_layer->support_fills.entities, polygons, support_flow, support_params);
                         total_entities += support_layer->support_fills.entities.size();
