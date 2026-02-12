@@ -12,6 +12,8 @@
 #include "Support/SupportSpotsGenerator.hpp"
 #ifdef HAS_RUST_TREE_SUPPORTS
 #include "Support/TreeSupportRust/include/orca_tree_supports.h"
+#include "Support/SupportCommon.hpp"
+#include "Support/SupportParameters.hpp"
 #endif
 #include "Surface.hpp"
 #include "Slicing.hpp"
@@ -3992,45 +3994,102 @@ void PrintObject::_generate_support_material()
         cfg.support_tree_min_height_to_model = scaled<int64_t>(TREE_SUPPORT_MIN_HEIGHT_TO_MODEL_MM);
         cfg.support_rests_on_model          = !m_config.support_on_build_plate_only.value;
 
-        // Convert mesh to flat arrays for FFI
-        const indexed_triangle_set &its = m_model_object->volumes.front()->mesh().its;
+        // Convert all model volumes to flat arrays for FFI, transformed to print coordinates.
+        // The transform trafo_centered() * mv->get_matrix() maps from volume-local
+        // coordinates to the print coordinate system (centered XY, model sitting on the
+        // build plate at Z ≈ 0), matching what slice_mesh_slabs() uses.
         std::vector<float> vertices;
-        vertices.reserve(its.vertices.size() * 3);
-        for (const auto &v : its.vertices) {
-            vertices.push_back(v.x());
-            vertices.push_back(v.y());
-            vertices.push_back(v.z());
-        }
         std::vector<uint32_t> indices;
-        indices.reserve(its.indices.size() * 3);
-        for (const auto &f : its.indices) {
-            indices.push_back(static_cast<uint32_t>(f[0]));
-            indices.push_back(static_cast<uint32_t>(f[1]));
-            indices.push_back(static_cast<uint32_t>(f[2]));
+        uint32_t vertex_offset = 0;
+        for (const ModelVolume *mv : m_model_object->volumes) {
+            if (!mv->is_model_part())
+                continue;
+            const indexed_triangle_set &its = mv->mesh().its;
+            Transform3d mesh_trafo = this->trafo_centered() * mv->get_matrix();
+            vertices.reserve(vertices.size() + its.vertices.size() * 3);
+            for (const auto &v : its.vertices) {
+                Vec3d tv = mesh_trafo * v.cast<double>();
+                vertices.push_back(static_cast<float>(tv.x()));
+                vertices.push_back(static_cast<float>(tv.y()));
+                vertices.push_back(static_cast<float>(tv.z()));
+            }
+            indices.reserve(indices.size() + its.indices.size() * 3);
+            for (const auto &f : its.indices) {
+                indices.push_back(static_cast<uint32_t>(f[0]) + vertex_offset);
+                indices.push_back(static_cast<uint32_t>(f[1]) + vertex_offset);
+                indices.push_back(static_cast<uint32_t>(f[2]) + vertex_offset);
+            }
+            vertex_offset += static_cast<uint32_t>(its.vertices.size());
+        }
+        if (vertices.empty()) {
+            BOOST_LOG_TRIVIAL(error) << "Tree support generation: no model part volumes with vertices";
+            return;
         }
 
         MeshData mesh_data;
         mesh_data.vertices = vertices.data();
-        mesh_data.vertex_count = static_cast<uint32_t>(its.vertices.size());
+        mesh_data.vertex_count = vertex_offset;
         mesh_data.indices = indices.data();
-        mesh_data.triangle_count = static_cast<uint32_t>(its.indices.size());
+        mesh_data.triangle_count = static_cast<uint32_t>(indices.size() / 3);
+
+        BOOST_LOG_TRIVIAL(info) << "Rust tree support: mesh has " << vertex_offset << " vertices, "
+                                 << mesh_data.triangle_count << " triangles";
 
         TreeSupportHandle *handle = orca_tree_support_create(&cfg, &mesh_data);
         if (handle) {
             SupportOutput *output = orca_tree_support_generate(handle);
-            if (output && output->success) {
-                // Convert Rust output to SupportLayer objects
-                // Note: layer.z is already in millimeters (not scaled)
+            if (output && output->success && output->layer_count > 0) {
+                // Set up support parameters and flow for extrusion generation
+                SupportParameters support_params(*this);
+                Flow support_flow = Slic3r::support_material_flow(this, float(m_slicing_params.layer_height));
+
+                // Convert Rust output to SupportLayer objects with polygon data
+                size_t total_entities = 0;
                 for (uint32_t i = 0; i < output->layer_count; i++) {
                     const auto &layer = output->layers[i];
                     coordf_t print_z = layer.z;
                     coordf_t height = (i > 0) ? print_z - output->layers[i - 1].z : print_z;
-                    add_tree_support_layer(static_cast<int>(i), height, print_z, print_z - 0.5 * height);
+                    SupportLayer *support_layer = add_tree_support_layer(static_cast<int>(i), height, print_z, print_z - 0.5 * height);
+
+                    // Convert Rust polygon data to Slic3r Polygons
+                    Polygons polygons;
+                    if (layer.polygon_count > 0 && layer.polygon_points != nullptr && layer.polygon_sizes != nullptr) {
+                        uint32_t point_offset = 0;
+                        for (uint32_t p = 0; p < layer.polygon_count; p++) {
+                            uint32_t poly_size = layer.polygon_sizes[p];
+                            Polygon polygon;
+                            polygon.points.reserve(poly_size);
+                            for (uint32_t j = 0; j < poly_size; j++) {
+                                const auto &pt = layer.polygon_points[point_offset + j];
+                                polygon.points.emplace_back(static_cast<coord_t>(pt.x), static_cast<coord_t>(pt.y));
+                            }
+                            point_offset += poly_size;
+                            if (!polygon.points.empty())
+                                polygons.push_back(std::move(polygon));
+                        }
+                    }
+
+                    if (!polygons.empty()) {
+                        // Store polygon coverage as support_islands (used by rendering,
+                        // retraction suppression, avoid-crossing-perimeters and brim).
+                        support_layer->support_islands = union_ex(polygons);
+                        // Also store as base_areas for tree-support-specific retraction checks.
+                        support_layer->base_areas = support_layer->support_islands;
+                        // lslices is used by brim generation and first-layer island detection for tree supports
+                        support_layer->lslices = support_layer->support_islands;
+                        // Generate extrusion fills for G-code output
+                        tree_supports_generate_paths(support_layer->support_fills.entities, polygons, support_flow, support_params);
+                        total_entities += support_layer->support_fills.entities.size();
+                    }
                 }
+                BOOST_LOG_TRIVIAL(info) << "Rust tree support generated " << output->layer_count << " layers, "
+                                         << output->branch_count << " branches, " << total_entities << " extrusion entities";
+                if (total_entities == 0)
+                    BOOST_LOG_TRIVIAL(warning) << "Rust tree support: generated layers but no extrusion entities — polygons may be too small for the support flow width";
             } else if (output && !output->success) {
                 BOOST_LOG_TRIVIAL(error) << "Rust tree support generation failed";
             } else {
-                BOOST_LOG_TRIVIAL(error) << "Rust tree support generation returned null output";
+                BOOST_LOG_TRIVIAL(warning) << "Rust tree support generation returned no layers";
             }
             if (output)
                 orca_tree_support_destroy_output(output);
@@ -4039,8 +4098,7 @@ void PrintObject::_generate_support_material()
             BOOST_LOG_TRIVIAL(error) << "Failed to create Rust tree support handle";
         }
 #else
-        // Rust tree supports not available — no tree support generation
-        BOOST_LOG_TRIVIAL(warning) << "Tree support generation requires Rust toolchain (HAS_RUST_TREE_SUPPORTS not defined)";
+        BOOST_LOG_TRIVIAL(error) << "Tree support requested but HAS_RUST_TREE_SUPPORTS is not defined";
 #endif
     }
     else {

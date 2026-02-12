@@ -2299,7 +2299,7 @@ void Print::process(long long *time_cost_with_cache, bool use_cache)
 
             auto physical_unprintables = this->get_physical_unprintable_filaments(used_filaments);
             auto geometric_unprintables = this->get_geometric_unprintable_filaments();
-            std::vector<int>filament_maps = this->get_filament_maps();
+            std::vector<int> filament_maps = this->get_filament_maps();
             auto map_mode = get_filament_map_mode();
             // get recommended filament map
             if (map_mode < FilamentMapMode::fmmManual) {
@@ -3167,7 +3167,7 @@ void Print::_make_wipe_tower()
             multi_extruder_flush.emplace_back(wipe_volumes);
         }
 
-        std::vector<int>filament_maps = get_filament_maps();
+        std::vector<int> filament_maps = get_filament_maps();
 
         std::vector<unsigned int> nozzle_cur_filament_ids(nozzle_nums, -1);
         unsigned int current_filament_id = m_wipe_tower_data.tool_ordering.first_extruder();
