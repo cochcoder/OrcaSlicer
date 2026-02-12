@@ -3935,146 +3935,159 @@ void PrintObject::combine_infill()
 
 void PrintObject::_generate_support_material()
 {
+    bool use_fallback_support = false;
+
     if (is_tree(m_config.support_type.value)) {
 #ifdef HAS_RUST_TREE_SUPPORTS
-        // Use Rust tree support generation via FFI
-        if (m_model_object->volumes.empty()) {
-            BOOST_LOG_TRIVIAL(error) << "Tree support generation: model object has no volumes";
-            return;
-        }
+        // Try Rust tree support generation via FFI
+        bool rust_succeeded = false;
 
-        // Default values for tree support parameters not exposed in OrcaSlicer UI
-        constexpr double TREE_SUPPORT_RESOLUTION_MM            = 0.025;
-        constexpr double TREE_SUPPORT_MIN_FEATURE_SIZE_MM      = 0.1;
-        constexpr double TREE_SUPPORT_XY_OVERHANGS_MM          = 0.2;
-        constexpr double TREE_SUPPORT_INTERFACE_SKIP_HEIGHT_MM = 0.3;
-        constexpr double TREE_SUPPORT_BP_DIAMETER_MM           = 7.5;   // buildplate contact diameter
-        constexpr double TREE_SUPPORT_MIN_BOTTOM_AREA_MM       = 1.0;
-        constexpr double TREE_SUPPORT_MAX_DIAMETER_INCREASE_MM = 1.0;   // max diameter increase per merge
-        constexpr double TREE_SUPPORT_MIN_HEIGHT_TO_MODEL_MM   = 1.0;
+        if (!m_model_object->volumes.empty()) {
+            // Default values for tree support parameters not exposed in OrcaSlicer UI
+            constexpr double TREE_SUPPORT_RESOLUTION_MM            = 0.025;
+            constexpr double TREE_SUPPORT_MIN_FEATURE_SIZE_MM      = 0.1;
+            constexpr double TREE_SUPPORT_XY_OVERHANGS_MM          = 0.2;
+            constexpr double TREE_SUPPORT_INTERFACE_SKIP_HEIGHT_MM = 0.3;
+            constexpr double TREE_SUPPORT_BP_DIAMETER_MM           = 7.5;   // buildplate contact diameter
+            constexpr double TREE_SUPPORT_MIN_BOTTOM_AREA_MM       = 1.0;
+            constexpr double TREE_SUPPORT_MAX_DIAMETER_INCREASE_MM = 1.0;   // max diameter increase per merge
+            constexpr double TREE_SUPPORT_MIN_HEIGHT_TO_MODEL_MM   = 1.0;
 
-        // Populate tree support config from OrcaSlicer print settings
-        TreeSupportConfig cfg = {};
-        cfg.layer_height                    = scaled<int64_t>(m_slicing_params.layer_height);
-        cfg.resolution                      = scaled<int64_t>(TREE_SUPPORT_RESOLUTION_MM);
-        cfg.min_feature_size                = scaled<int64_t>(TREE_SUPPORT_MIN_FEATURE_SIZE_MM);
-        cfg.support_angle                   = m_config.support_angle.value * M_PI / 180.0;
-        cfg.support_line_width              = scaled<int64_t>(m_config.support_line_width.get_abs_value(m_config.line_width.value));
-        cfg.support_roof_line_width         = scaled<int64_t>(m_config.support_line_width.get_abs_value(m_config.line_width.value));
-        cfg.support_bottom_enable           = m_config.support_interface_bottom_layers.value > 0;
-        cfg.support_bottom_height           = scaled<int64_t>(m_config.support_bottom_z_distance.value);
-        cfg.support_material_buildplate_only = m_config.support_on_build_plate_only.value;
-        cfg.support_xy_distance             = scaled<int64_t>(m_config.support_object_xy_distance.value);
-        cfg.support_xy_distance_first_layer = scaled<int64_t>(m_config.support_object_xy_distance.value);
-        cfg.support_xy_distance_overhang    = scaled<int64_t>(TREE_SUPPORT_XY_OVERHANGS_MM);
-        cfg.support_top_distance            = scaled<int64_t>(m_config.support_top_z_distance.value);
-        cfg.support_bottom_distance         = scaled<int64_t>(m_config.support_bottom_z_distance.value);
-        cfg.support_interface_skip_height   = scaled<int64_t>(TREE_SUPPORT_INTERFACE_SKIP_HEIGHT_MM);
-        cfg.support_roof_enable             = m_config.support_interface_top_layers.value > 0;
-        cfg.support_roof_layers             = static_cast<int32_t>(m_config.support_interface_top_layers.value);
-        cfg.support_floor_enable            = m_config.support_interface_bottom_layers.value > 0;
-        cfg.support_floor_layers            = static_cast<int32_t>(m_config.support_interface_bottom_layers.value);
-        cfg.minimum_roof_area               = 0.0; // no minimum, generate roof for all contact areas
-        cfg.support_line_spacing            = scaled<int64_t>(m_config.support_base_pattern_spacing.value);
-        cfg.support_bottom_offset           = 0;   // no offset for bottom support layers
-        cfg.support_wall_count              = static_cast<int32_t>(m_config.tree_support_wall_count.value);
-        cfg.support_roof_line_distance      = cfg.support_line_width;
-        cfg.minimum_support_area            = 0;   // no minimum, generate support for all detected overhangs
-        cfg.minimum_bottom_area             = scaled<int64_t>(TREE_SUPPORT_MIN_BOTTOM_AREA_MM);
-        cfg.support_offset                  = 0;   // no additional polygon offset
-        cfg.support_tree_angle              = m_config.tree_support_branch_angle.value * M_PI / 180.0;
-        cfg.support_tree_angle_slow         = m_config.tree_support_angle_slow.value * M_PI / 180.0;
-        cfg.support_tree_branch_diameter    = scaled<int64_t>(m_config.tree_support_branch_diameter.value);
-        cfg.support_tree_branch_diameter_angle = m_config.tree_support_branch_diameter_angle.value * M_PI / 180.0;
-        cfg.support_tree_branch_distance    = scaled<int64_t>(m_config.tree_support_branch_distance.value);
-        cfg.support_tree_bp_diameter        = scaled<int64_t>(TREE_SUPPORT_BP_DIAMETER_MM);
-        cfg.support_tree_top_rate           = m_config.tree_support_top_rate.value;
-        cfg.support_tree_tip_diameter       = scaled<int64_t>(m_config.tree_support_tip_diameter.value);
-        cfg.support_tree_max_diameter_increase_by_merges_when_support_to_model = scaled<int64_t>(TREE_SUPPORT_MAX_DIAMETER_INCREASE_MM);
-        cfg.support_tree_min_height_to_model = scaled<int64_t>(TREE_SUPPORT_MIN_HEIGHT_TO_MODEL_MM);
-        cfg.support_rests_on_model          = !m_config.support_on_build_plate_only.value;
+            // Populate tree support config from OrcaSlicer print settings
+            TreeSupportConfig cfg = {};
+            cfg.layer_height                    = scaled<int64_t>(m_slicing_params.layer_height);
+            cfg.resolution                      = scaled<int64_t>(TREE_SUPPORT_RESOLUTION_MM);
+            cfg.min_feature_size                = scaled<int64_t>(TREE_SUPPORT_MIN_FEATURE_SIZE_MM);
+            cfg.support_angle                   = m_config.support_angle.value * M_PI / 180.0;
+            cfg.support_line_width              = scaled<int64_t>(m_config.support_line_width.get_abs_value(m_config.line_width.value));
+            cfg.support_roof_line_width         = scaled<int64_t>(m_config.support_line_width.get_abs_value(m_config.line_width.value));
+            cfg.support_bottom_enable           = m_config.support_interface_bottom_layers.value > 0;
+            cfg.support_bottom_height           = scaled<int64_t>(m_config.support_bottom_z_distance.value);
+            cfg.support_material_buildplate_only = m_config.support_on_build_plate_only.value;
+            cfg.support_xy_distance             = scaled<int64_t>(m_config.support_object_xy_distance.value);
+            cfg.support_xy_distance_first_layer = scaled<int64_t>(m_config.support_object_xy_distance.value);
+            cfg.support_xy_distance_overhang    = scaled<int64_t>(TREE_SUPPORT_XY_OVERHANGS_MM);
+            cfg.support_top_distance            = scaled<int64_t>(m_config.support_top_z_distance.value);
+            cfg.support_bottom_distance         = scaled<int64_t>(m_config.support_bottom_z_distance.value);
+            cfg.support_interface_skip_height   = scaled<int64_t>(TREE_SUPPORT_INTERFACE_SKIP_HEIGHT_MM);
+            cfg.support_roof_enable             = m_config.support_interface_top_layers.value > 0;
+            cfg.support_roof_layers             = static_cast<int32_t>(m_config.support_interface_top_layers.value);
+            cfg.support_floor_enable            = m_config.support_interface_bottom_layers.value > 0;
+            cfg.support_floor_layers            = static_cast<int32_t>(m_config.support_interface_bottom_layers.value);
+            cfg.minimum_roof_area               = 0.0; // no minimum, generate roof for all contact areas
+            cfg.support_line_spacing            = scaled<int64_t>(m_config.support_base_pattern_spacing.value);
+            cfg.support_bottom_offset           = 0;   // no offset for bottom support layers
+            cfg.support_wall_count              = static_cast<int32_t>(m_config.tree_support_wall_count.value);
+            cfg.support_roof_line_distance      = cfg.support_line_width;
+            cfg.minimum_support_area            = 0;   // no minimum, generate support for all detected overhangs
+            cfg.minimum_bottom_area             = scaled<int64_t>(TREE_SUPPORT_MIN_BOTTOM_AREA_MM);
+            cfg.support_offset                  = 0;   // no additional polygon offset
+            cfg.support_tree_angle              = m_config.tree_support_branch_angle.value * M_PI / 180.0;
+            cfg.support_tree_angle_slow         = m_config.tree_support_angle_slow.value * M_PI / 180.0;
+            cfg.support_tree_branch_diameter    = scaled<int64_t>(m_config.tree_support_branch_diameter.value);
+            cfg.support_tree_branch_diameter_angle = m_config.tree_support_branch_diameter_angle.value * M_PI / 180.0;
+            cfg.support_tree_branch_distance    = scaled<int64_t>(m_config.tree_support_branch_distance.value);
+            cfg.support_tree_bp_diameter        = scaled<int64_t>(TREE_SUPPORT_BP_DIAMETER_MM);
+            cfg.support_tree_top_rate           = m_config.tree_support_top_rate.value;
+            cfg.support_tree_tip_diameter       = scaled<int64_t>(m_config.tree_support_tip_diameter.value);
+            cfg.support_tree_max_diameter_increase_by_merges_when_support_to_model = scaled<int64_t>(TREE_SUPPORT_MAX_DIAMETER_INCREASE_MM);
+            cfg.support_tree_min_height_to_model = scaled<int64_t>(TREE_SUPPORT_MIN_HEIGHT_TO_MODEL_MM);
+            cfg.support_rests_on_model          = !m_config.support_on_build_plate_only.value;
 
-        // Convert mesh to flat arrays for FFI
-        const indexed_triangle_set &its = m_model_object->volumes.front()->mesh().its;
-        std::vector<float> vertices;
-        vertices.reserve(its.vertices.size() * 3);
-        for (const auto &v : its.vertices) {
-            vertices.push_back(v.x());
-            vertices.push_back(v.y());
-            vertices.push_back(v.z());
-        }
-        std::vector<uint32_t> indices;
-        indices.reserve(its.indices.size() * 3);
-        for (const auto &f : its.indices) {
-            indices.push_back(static_cast<uint32_t>(f[0]));
-            indices.push_back(static_cast<uint32_t>(f[1]));
-            indices.push_back(static_cast<uint32_t>(f[2]));
-        }
+            // Convert mesh to flat arrays for FFI
+            const indexed_triangle_set &its = m_model_object->volumes.front()->mesh().its;
+            std::vector<float> vertices;
+            vertices.reserve(its.vertices.size() * 3);
+            for (const auto &v : its.vertices) {
+                vertices.push_back(v.x());
+                vertices.push_back(v.y());
+                vertices.push_back(v.z());
+            }
+            std::vector<uint32_t> indices;
+            indices.reserve(its.indices.size() * 3);
+            for (const auto &f : its.indices) {
+                indices.push_back(static_cast<uint32_t>(f[0]));
+                indices.push_back(static_cast<uint32_t>(f[1]));
+                indices.push_back(static_cast<uint32_t>(f[2]));
+            }
 
-        MeshData mesh_data;
-        mesh_data.vertices = vertices.data();
-        mesh_data.vertex_count = static_cast<uint32_t>(its.vertices.size());
-        mesh_data.indices = indices.data();
-        mesh_data.triangle_count = static_cast<uint32_t>(its.indices.size());
+            MeshData mesh_data;
+            mesh_data.vertices = vertices.data();
+            mesh_data.vertex_count = static_cast<uint32_t>(its.vertices.size());
+            mesh_data.indices = indices.data();
+            mesh_data.triangle_count = static_cast<uint32_t>(its.indices.size());
 
-        TreeSupportHandle *handle = orca_tree_support_create(&cfg, &mesh_data);
-        if (handle) {
-            SupportOutput *output = orca_tree_support_generate(handle);
-            if (output && output->success && output->layer_count > 0) {
-                // Set up support parameters and flow for extrusion generation
-                SupportParameters support_params(*this);
-                Flow support_flow = Slic3r::support_material_flow(this, float(m_slicing_params.layer_height));
+            TreeSupportHandle *handle = orca_tree_support_create(&cfg, &mesh_data);
+            if (handle) {
+                SupportOutput *output = orca_tree_support_generate(handle);
+                if (output && output->success && output->layer_count > 0) {
+                    // Set up support parameters and flow for extrusion generation
+                    SupportParameters support_params(*this);
+                    Flow support_flow = Slic3r::support_material_flow(this, float(m_slicing_params.layer_height));
 
-                // Convert Rust output to SupportLayer objects with polygon data
-                for (uint32_t i = 0; i < output->layer_count; i++) {
-                    const auto &layer = output->layers[i];
-                    coordf_t print_z = layer.z;
-                    coordf_t height = (i > 0) ? print_z - output->layers[i - 1].z : print_z;
-                    SupportLayer *support_layer = add_tree_support_layer(static_cast<int>(i), height, print_z, print_z - 0.5 * height);
+                    // Convert Rust output to SupportLayer objects with polygon data
+                    bool has_any_fills = false;
+                    for (uint32_t i = 0; i < output->layer_count; i++) {
+                        const auto &layer = output->layers[i];
+                        coordf_t print_z = layer.z;
+                        coordf_t height = (i > 0) ? print_z - output->layers[i - 1].z : print_z;
+                        SupportLayer *support_layer = add_tree_support_layer(static_cast<int>(i), height, print_z, print_z - 0.5 * height);
 
-                    // Convert Rust polygon data to Slic3r Polygons
-                    Polygons polygons;
-                    if (layer.polygon_count > 0 && layer.polygon_points != nullptr && layer.polygon_sizes != nullptr) {
-                        uint32_t point_offset = 0;
-                        for (uint32_t p = 0; p < layer.polygon_count; p++) {
-                            uint32_t poly_size = layer.polygon_sizes[p];
-                            Polygon polygon;
-                            polygon.points.reserve(poly_size);
-                            for (uint32_t j = 0; j < poly_size; j++) {
-                                const auto &pt = layer.polygon_points[point_offset + j];
-                                polygon.points.emplace_back(static_cast<coord_t>(pt.x), static_cast<coord_t>(pt.y));
+                        // Convert Rust polygon data to Slic3r Polygons
+                        Polygons polygons;
+                        if (layer.polygon_count > 0 && layer.polygon_points != nullptr && layer.polygon_sizes != nullptr) {
+                            uint32_t point_offset = 0;
+                            for (uint32_t p = 0; p < layer.polygon_count; p++) {
+                                uint32_t poly_size = layer.polygon_sizes[p];
+                                Polygon polygon;
+                                polygon.points.reserve(poly_size);
+                                for (uint32_t j = 0; j < poly_size; j++) {
+                                    const auto &pt = layer.polygon_points[point_offset + j];
+                                    polygon.points.emplace_back(static_cast<coord_t>(pt.x), static_cast<coord_t>(pt.y));
+                                }
+                                point_offset += poly_size;
+                                if (!polygon.points.empty())
+                                    polygons.push_back(std::move(polygon));
                             }
-                            point_offset += poly_size;
-                            if (!polygon.points.empty())
-                                polygons.push_back(std::move(polygon));
+                        }
+
+                        if (!polygons.empty()) {
+                            // Store as base_areas for retraction suppression
+                            support_layer->base_areas = union_ex(polygons);
+                            // Generate extrusion fills for G-code output
+                            tree_supports_generate_paths(support_layer->support_fills.entities, polygons, support_flow, support_params);
+                            if (!support_layer->support_fills.entities.empty())
+                                has_any_fills = true;
                         }
                     }
 
-                    if (!polygons.empty()) {
-                        // Store as base_areas for retraction suppression
-                        support_layer->base_areas = union_ex(polygons);
-                        // Generate extrusion fills for G-code output
-                        tree_supports_generate_paths(support_layer->support_fills.entities, polygons, support_flow, support_params);
+                    if (has_any_fills) {
+                        rust_succeeded = true;
+                        BOOST_LOG_TRIVIAL(info) << "Rust tree support generated " << output->layer_count << " layers, " << output->branch_count << " branches";
+                    } else {
+                        // Rust tree support produced layers but no actual extrusion fills — clear and fall back
+                        this->clear_support_layers();
+                        BOOST_LOG_TRIVIAL(warning) << "Rust tree support produced no extrusion fills, falling back to standard support generator";
                     }
                 }
-                BOOST_LOG_TRIVIAL(info) << "Rust tree support generated " << output->layer_count << " layers, " << output->branch_count << " branches";
-            } else if (output && !output->success) {
-                BOOST_LOG_TRIVIAL(error) << "Rust tree support generation failed";
-            } else {
-                BOOST_LOG_TRIVIAL(error) << "Rust tree support generation returned null output";
+                if (output)
+                    orca_tree_support_destroy_output(output);
+                orca_tree_support_destroy_handle(handle);
             }
-            if (output)
-                orca_tree_support_destroy_output(output);
-            orca_tree_support_destroy_handle(handle);
-        } else {
-            BOOST_LOG_TRIVIAL(error) << "Failed to create Rust tree support handle";
+        }
+
+        if (!rust_succeeded) {
+            BOOST_LOG_TRIVIAL(info) << "Rust tree support did not produce output, using standard support generator as fallback";
+            use_fallback_support = true;
         }
 #else
-        // Rust tree supports not available — no tree support generation
-        BOOST_LOG_TRIVIAL(warning) << "Tree support generation requires Rust toolchain (HAS_RUST_TREE_SUPPORTS not defined)";
+        // Rust tree supports not available — fall back to standard support generator
+        BOOST_LOG_TRIVIAL(info) << "Tree support: Rust toolchain not available, using standard support generator as fallback";
+        use_fallback_support = true;
 #endif
     }
-    else {
+
+    if (!is_tree(m_config.support_type.value) || use_fallback_support) {
         PrintObjectSupportMaterial support_material(this, m_slicing_params);
         support_material.generate(*this);
     }
