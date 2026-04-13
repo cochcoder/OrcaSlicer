@@ -42,7 +42,7 @@ struct NormalizedInput
 bool is_binary_gcode_path(const std::string& path);
 DetectionResult detect_file(const std::string& path);
 NormalizedInput normalize_for_gcode_parser(const std::string& path);
-void encode_from_text_file(const std::string& text_gcode_path, const std::string& bgcode_path);
+void copy_text_to_bgcode_file(const std::string& text_gcode_path, const std::string& bgcode_path);
 
 } // namespace Slic3r::BinaryGCode
 

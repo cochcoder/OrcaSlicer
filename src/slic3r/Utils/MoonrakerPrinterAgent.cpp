@@ -93,15 +93,15 @@ bool has_supported_gcode_suffix(const std::string& filename)
     return boost::iends_with(filename, ".gcode") || boost::iends_with(filename, ".bgcode");
 }
 
-std::string preferred_gcode_suffix(const std::string& extension_hint)
+std::string preferred_gcode_suffix(const std::string& source_filename)
 {
-    return boost::iends_with(extension_hint, ".bgcode") ? ".bgcode" : ".gcode";
+    return boost::iends_with(source_filename, ".bgcode") ? ".bgcode" : ".gcode";
 }
 
-void ensure_gcode_suffix(std::string& filename, const std::string& extension_hint)
+void ensure_gcode_suffix(std::string& filename, const std::string& source_filename)
 {
     if (!has_supported_gcode_suffix(filename))
-        filename += preferred_gcode_suffix(extension_hint);
+        filename += preferred_gcode_suffix(source_filename);
 }
 
 } // namespace

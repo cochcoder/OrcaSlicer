@@ -76,7 +76,7 @@ NormalizedInput normalize_for_gcode_parser(const std::string& path)
     return { path, path, false };
 }
 
-void encode_from_text_file(const std::string& text_gcode_path, const std::string& bgcode_path)
+void copy_text_to_bgcode_file(const std::string& text_gcode_path, const std::string& bgcode_path)
 {
     if (!boost::filesystem::exists(text_gcode_path))
         throw Error(ErrorCode::IoError, "Source G-code file does not exist: " + text_gcode_path);
