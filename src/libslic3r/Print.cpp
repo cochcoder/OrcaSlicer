@@ -19,6 +19,7 @@
 #include "MaterialType.hpp"
 #include "Model.hpp"
 #include "format.hpp"
+#include "BinaryGCode.hpp"
 #include <float.h>
 
 #include <algorithm>
@@ -28,6 +29,7 @@
 #include <boost/format.hpp>
 #include <boost/log/trivial.hpp>
 #include <boost/regex.hpp>
+#include <boost/nowide/cstdio.hpp>
 #include <boost/nowide/fstream.hpp>
 
 #include <tbb/blocked_range.h>
@@ -2489,13 +2491,28 @@ std::string Print::export_gcode(const std::string& path_template, GCodeProcessor
 
     // The following line may die for multiple reasons.
     GCode gcode;
+    const bool export_as_bgcode = BinaryGCode::is_binary_gcode_path(path);
+    const std::string text_export_path = export_as_bgcode ? path + ".text.gcode" : path;
     //BBS: compute plate offset for gcode-generator
     const Vec3d origin = this->get_plate_origin();
     gcode.set_gcode_offset(origin(0), origin(1));
-    gcode.do_export(this, path.c_str(), result, thumbnail_cb);
-    gcode.export_layer_filaments(result);
+    try {
+        gcode.do_export(this, text_export_path.c_str(), result, thumbnail_cb);
+        gcode.export_layer_filaments(result);
+        if (export_as_bgcode) {
+            BinaryGCode::copy_text_to_bgcode_file(text_export_path, path);
+            boost::nowide::remove(text_export_path.c_str());
+            if (result != nullptr)
+                result->filename = path;
+        }
+    } catch (...) {
+        if (export_as_bgcode)
+            boost::nowide::remove(text_export_path.c_str());
+        throw;
+    }
     //BBS
-    result->conflict_result = m_conflict_result;
+    if (result != nullptr)
+        result->conflict_result = m_conflict_result;
     return path.c_str();
 }
 

@@ -2498,77 +2498,87 @@ void GCodeProcessor::process_file(const std::string& filename, std::function<voi
     CNumericLocalesSetter locales_setter;
     const auto normalized_input = BinaryGCode::normalize_for_gcode_parser(filename);
     const std::string& parser_input = normalized_input.parser_path;
+    const auto cleanup_temp_file = [&normalized_input]() {
+        if (normalized_input.uses_temporary_path && !normalized_input.parser_path.empty())
+            boost::nowide::remove(normalized_input.parser_path.c_str());
+    };
 
-    // pre-processing
-    // parse the gcode file to detect its producer
-    {
-        m_parser.parse_file_raw(parser_input, [this](GCodeReader& reader, const char *begin, const char *end) {
-            begin = skip_whitespaces(begin, end);
-            if (begin != end && *begin == ';') {
-                // Comment.
-                begin = skip_whitespaces(++ begin, end);
-                end   = remove_eols(begin, end);
-                if (begin != end) {
-                    if (m_producer == EProducer::Unknown) {
-                        if (detect_producer(std::string_view(begin, end - begin))) {
+    try {
+        // pre-processing
+        // parse the gcode file to detect its producer
+        {
+            m_parser.parse_file_raw(parser_input, [this](GCodeReader& reader, const char *begin, const char *end) {
+                begin = skip_whitespaces(begin, end);
+                if (begin != end && *begin == ';') {
+                    // Comment.
+                    begin = skip_whitespaces(++ begin, end);
+                    end   = remove_eols(begin, end);
+                    if (begin != end) {
+                        if (m_producer == EProducer::Unknown) {
+                            if (detect_producer(std::string_view(begin, end - begin))) {
+                                m_parser.quit_parsing();
+                            }
+                        } else if (std::string(begin, end).find("CONFIG_BLOCK_END") != std::string::npos) {
                             m_parser.quit_parsing();
                         }
-                    } else if (std::string(begin, end).find("CONFIG_BLOCK_END") != std::string::npos) {
-                        m_parser.quit_parsing();
                     }
                 }
+            });
+            m_parser.reset();
+
+            // if the gcode was produced by OrcaSlicer,
+            // extract the config from it
+            if (m_producer == EProducer::OrcaSlicer || m_producer == EProducer::Slic3rPE || m_producer == EProducer::Slic3r) {
+                DynamicPrintConfig config;
+                config.apply(FullPrintConfig::defaults());
+                // Silently substitute unknown values by new ones for loading configurations from OrcaSlicer's own G-code.
+                // Showing substitution log or errors may make sense, but we are not really reading many values from the G-code config,
+                // thus a probability of incorrect substitution is low and the G-code viewer is a consumer-only anyways.
+                config.load_from_gcode_file(parser_input, ForwardCompatibilitySubstitutionRule::EnableSilent);
+
+                // Get the correct printer vendor based on the `printer_model` field
+                auto printer_model_opt = config.opt<ConfigOptionString>("printer_model");
+                if (printer_model_opt && !printer_model_opt->value.empty()) {
+                    // TODO: Orca hack, proper vendor check?
+                    GCodeProcessor::s_IsBBLPrinter = boost::starts_with(printer_model_opt->value, "Bambu Lab");
+                }
+
+                ConfigOptionStrings *filament_color = config.opt<ConfigOptionStrings>("filament_colour");
+                ConfigOptionInts    *filament_map   = config.opt<ConfigOptionInts>("filament_map", true);
+                if (filament_color && filament_color->size() != filament_map->size()) {
+                    filament_map->values.resize(filament_color->size(), 1);
+                }
+
+                apply_config(config);
             }
-        });
-        m_parser.reset();
-
-        // if the gcode was produced by OrcaSlicer,
-        // extract the config from it
-        if (m_producer == EProducer::OrcaSlicer || m_producer == EProducer::Slic3rPE || m_producer == EProducer::Slic3r) {
-            DynamicPrintConfig config;
-            config.apply(FullPrintConfig::defaults());
-            // Silently substitute unknown values by new ones for loading configurations from OrcaSlicer's own G-code.
-            // Showing substitution log or errors may make sense, but we are not really reading many values from the G-code config,
-            // thus a probability of incorrect substitution is low and the G-code viewer is a consumer-only anyways.
-            config.load_from_gcode_file(parser_input, ForwardCompatibilitySubstitutionRule::EnableSilent);
-
-            // Get the correct printer vendor based on the `printer_model` field
-            auto printer_model_opt = config.opt<ConfigOptionString>("printer_model");
-            if (printer_model_opt && !printer_model_opt->value.empty()) {
-                // TODO: Orca hack, proper vendor check?
-                GCodeProcessor::s_IsBBLPrinter = boost::starts_with(printer_model_opt->value, "Bambu Lab");
-            }
-
-            ConfigOptionStrings *filament_color = config.opt<ConfigOptionStrings>("filament_colour");
-            ConfigOptionInts    *filament_map   = config.opt<ConfigOptionInts>("filament_map", true);
-            if (filament_color && filament_color->size() != filament_map->size()) {
-                filament_map->values.resize(filament_color->size(), 1);
-            }
-
-            apply_config(config);
+            else if (m_producer == EProducer::Simplify3D)
+                apply_config_simplify3d(parser_input);
+            else if (m_producer == EProducer::SuperSlicer)
+                apply_config_superslicer(parser_input);
         }
-        else if (m_producer == EProducer::Simplify3D)
-            apply_config_simplify3d(parser_input);
-        else if (m_producer == EProducer::SuperSlicer)
-            apply_config_superslicer(parser_input);
+
+        // process gcode
+        m_result.filename = normalized_input.uses_temporary_path ? parser_input : filename;
+        m_result.id = ++s_result_id;
+        initialize_result_moves();
+        size_t parse_line_callback_cntr = 10000;
+        m_parser.parse_file(parser_input, [this, cancel_callback, &parse_line_callback_cntr](GCodeReader& reader, const GCodeReader::GCodeLine& line) {
+            if (-- parse_line_callback_cntr == 0) {
+                // Don't call the cancel_callback() too often, do it every at every 10000'th line.
+                parse_line_callback_cntr = 10000;
+                if (cancel_callback)
+                    cancel_callback();
+            }
+            this->process_gcode_line(line, true);
+        }, m_result.lines_ends);
+
+        // Don't post-process the G-code to update time stamps.
+        this->finalize(false);
+        cleanup_temp_file();
+    } catch (...) {
+        cleanup_temp_file();
+        throw;
     }
-
-    // process gcode
-    m_result.filename = filename;
-    m_result.id = ++s_result_id;
-    initialize_result_moves();
-    size_t parse_line_callback_cntr = 10000;
-    m_parser.parse_file(parser_input, [this, cancel_callback, &parse_line_callback_cntr](GCodeReader& reader, const GCodeReader::GCodeLine& line) {
-        if (-- parse_line_callback_cntr == 0) {
-            // Don't call the cancel_callback() too often, do it every at every 10000'th line.
-            parse_line_callback_cntr = 10000;
-            if (cancel_callback)
-                cancel_callback();
-        }
-        this->process_gcode_line(line, true);
-    }, m_result.lines_ends);
-
-    // Don't post-process the G-code to update time stamps.
-    this->finalize(false);
 }
 
 void GCodeProcessor::initialize(const std::string& filename)
