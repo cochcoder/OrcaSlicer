@@ -10,6 +10,11 @@
 #include "nanosvg/nanosvgrast.h"
 namespace {
 
+constexpr char BGCODE_TEMP_TEXT_PATTERN[] = "orcaslicer-bgcode-text-%%%%%%%%.gcode";
+constexpr char BGCODE_TEMP_BIN_PATTERN[] = "orcaslicer-bgcode-bin-%%%%%%%%.bgcode";
+constexpr char BGCODE_TEMP_V2_PATTERN[] = "orcaslicer-bgcode-v2-%%%%%%%%.bgcode";
+constexpr char BGCODE_TEMP_PLAIN_PATTERN[] = "orcaslicer-bgcode-plain-%%%%%%%%.bgcode";
+
 struct TempFileScope
 {
     std::vector<boost::filesystem::path> paths;
@@ -71,8 +76,8 @@ TEST_CASE("gcode_extension_detection", "[utils]") {
 
 TEST_CASE("bgcode_roundtrip_normalization", "[utils][bgcode]") {
     namespace fs = boost::filesystem;
-    const fs::path text_path = fs::temp_directory_path() / fs::unique_path("orcaslicer-bgcode-text-%%%%.gcode");
-    const fs::path bg_path = fs::temp_directory_path() / fs::unique_path("orcaslicer-bgcode-bin-%%%%.bgcode");
+    const fs::path text_path = fs::temp_directory_path() / fs::unique_path(BGCODE_TEMP_TEXT_PATTERN);
+    const fs::path bg_path = fs::temp_directory_path() / fs::unique_path(BGCODE_TEMP_BIN_PATTERN);
     TempFileScope cleanup { { text_path, bg_path } };
 
     const std::string payload = "G1 X1.000 Y2.000 E0.500\n; generated\nM104 S200\n";
@@ -97,7 +102,7 @@ TEST_CASE("bgcode_roundtrip_normalization", "[utils][bgcode]") {
 
 TEST_CASE("bgcode_version_validation", "[utils][bgcode]") {
     namespace fs = boost::filesystem;
-    const fs::path bg_path = fs::temp_directory_path() / fs::unique_path("orcaslicer-bgcode-v2-%%%%.bgcode");
+    const fs::path bg_path = fs::temp_directory_path() / fs::unique_path(BGCODE_TEMP_V2_PATTERN);
     TempFileScope cleanup { { bg_path } };
 
     {
@@ -120,7 +125,7 @@ TEST_CASE("bgcode_version_validation", "[utils][bgcode]") {
 
 TEST_CASE("bgcode_plain_text_passthrough", "[utils][bgcode]") {
     namespace fs = boost::filesystem;
-    const fs::path bg_path = fs::temp_directory_path() / fs::unique_path("orcaslicer-bgcode-plain-%%%%.bgcode");
+    const fs::path bg_path = fs::temp_directory_path() / fs::unique_path(BGCODE_TEMP_PLAIN_PATTERN);
     TempFileScope cleanup { { bg_path } };
 
     {
