@@ -98,6 +98,66 @@ using namespace nlohmann;
 
 using namespace Slic3r;
 
+#ifdef __WXGTK__
+namespace {
+
+std::string linux_detect_session_backend()
+{
+    const char* xdg_session_type = boost::nowide::getenv("XDG_SESSION_TYPE");
+    if (xdg_session_type != nullptr && *xdg_session_type != '\0')
+        return xdg_session_type;
+
+    const char* wayland_display = boost::nowide::getenv("WAYLAND_DISPLAY");
+    if (wayland_display != nullptr && *wayland_display != '\0')
+        return "wayland";
+
+    const char* x11_display = boost::nowide::getenv("DISPLAY");
+    if (x11_display != nullptr && *x11_display != '\0')
+        return "x11";
+
+    return "unknown";
+}
+
+std::string linux_select_gdk_backend(std::string& reason)
+{
+    const char* backend_override = boost::nowide::getenv("ORCASLICER_GDK_BACKEND");
+    if (backend_override != nullptr && *backend_override != '\0') {
+        reason = "orcaslicer_override";
+        return backend_override;
+    }
+
+    const char* existing_backend = boost::nowide::getenv("GDK_BACKEND");
+    if (existing_backend != nullptr && *existing_backend != '\0') {
+        reason = "user_env_override";
+        return existing_backend;
+    }
+
+    const std::string session_backend = linux_detect_session_backend();
+    if (session_backend == "wayland") {
+        reason = "wayland_default_with_x11_fallback";
+        return "wayland,x11";
+    }
+    if (session_backend == "x11") {
+        reason = "x11_session";
+        return "x11";
+    }
+
+    reason = "safe_autodetect_fallback";
+    return "wayland,x11";
+}
+
+bool linux_backend_may_use_x11(const std::string& backend)
+{
+    if (backend.find("x11") != std::string::npos)
+        return true;
+
+    const char* x11_display = boost::nowide::getenv("DISPLAY");
+    return x11_display != nullptr && *x11_display != '\0';
+}
+
+} // namespace
+#endif
+
 /*typedef struct _error_message{
     int code;
     std::string message;
@@ -1183,10 +1243,11 @@ int CLI::run(int argc, char **argv)
     save_main_thread_id();
 
 #ifdef __WXGTK__
-    // On Linux, wxGTK has no support for Wayland, and the app crashes on
-    // startup if gtk3 is used. This env var has to be set explicitly to
-    // instruct the window manager to fall back to X server mode.
-    ::setenv("GDK_BACKEND", "x11", /* replace */ true);
+    std::string backend_reason;
+    const std::string selected_backend = linux_select_gdk_backend(backend_reason);
+    if (::setenv("GDK_BACKEND", selected_backend.c_str(), /* replace */ true) != 0)
+        BOOST_LOG_TRIVIAL(warning) << "Failed to set GDK_BACKEND=" << selected_backend;
+    BOOST_LOG_TRIVIAL(info) << "Linux backend selection: GDK_BACKEND=" << selected_backend << " reason=" << backend_reason;
 
     // WebKit2GTK's compositing mode can fail under XWayland, causing WebViews
     // (like the Setup Wizard) to render blank or freeze. Disabling compositing
@@ -1204,9 +1265,10 @@ int CLI::run(int argc, char **argv)
         ::setenv("__GLX_VENDOR_LIBRARY_NAME", "nvidia", /* replace */ false);
     }
 
-    // Also on Linux, we need to tell Xlib that we will be using threads,
-    // lest we crash when we fire up GStreamer.
-    XInitThreads();
+    // Also on Linux, we need to tell Xlib that we will be using threads
+    // whenever an X11 path is possible (native X11 or fallback).
+    if (linux_backend_may_use_x11(selected_backend))
+        XInitThreads();
 #endif
 
 	// Switch boost::filesystem to utf8.

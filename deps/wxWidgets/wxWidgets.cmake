@@ -1,8 +1,10 @@
 set(_wx_toolkit "")
 set(_wx_debug_postfix "")
 set(_wx_shared -DwxBUILD_SHARED=OFF)
+set(_wx_glcanvas_egl "-DwxUSE_GLCANVAS_EGL=OFF")
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     set(_gtk_ver 2)
+    set(_wx_glcanvas_egl "-DwxUSE_GLCANVAS_EGL=ON")
 
     if (DEP_WX_GTK3)
         set(_gtk_ver 3)
@@ -38,7 +40,7 @@ orcaslicer_add_cmake_project(
         -DwxUSE_DETECT_SM=OFF
         -DwxUSE_PRIVATE_FONTS=ON
         -DwxUSE_OPENGL=ON
-        -DwxUSE_GLCANVAS_EGL=OFF
+        ${_wx_glcanvas_egl}
         -DwxUSE_WEBREQUEST=ON
         -DwxUSE_WEBVIEW=ON
         ${_wx_edge}
