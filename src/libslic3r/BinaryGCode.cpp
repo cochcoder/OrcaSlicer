@@ -10,6 +10,7 @@ namespace Slic3r::BinaryGCode {
 namespace {
 
 constexpr size_t PROBE_SIZE = 4096;
+// Header probe currently expects: "BGCODE" + 2 bytes (major/minor version).
 constexpr char BGCODE_MAGIC[] = "BGCODE";
 constexpr size_t BGCODE_MAGIC_SIZE = sizeof(BGCODE_MAGIC) - 1;
 

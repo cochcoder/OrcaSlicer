@@ -2553,7 +2553,7 @@ void GCodeProcessor::process_file(const std::string& filename, std::function<voi
     }
 
     // process gcode
-    m_result.filename = parser_input;
+    m_result.filename = filename;
     m_result.id = ++s_result_id;
     initialize_result_moves();
     size_t parse_line_callback_cntr = 10000;
