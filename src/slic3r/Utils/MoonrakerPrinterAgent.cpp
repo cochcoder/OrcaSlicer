@@ -93,6 +93,17 @@ bool has_supported_gcode_suffix(const std::string& filename)
     return boost::iends_with(filename, ".gcode") || boost::iends_with(filename, ".bgcode");
 }
 
+std::string preferred_gcode_suffix(const std::string& extension_hint)
+{
+    return boost::iends_with(extension_hint, ".bgcode") ? ".bgcode" : ".gcode";
+}
+
+void ensure_gcode_suffix(std::string& filename, const std::string& extension_hint)
+{
+    if (!has_supported_gcode_suffix(filename))
+        filename += preferred_gcode_suffix(extension_hint);
+}
+
 } // namespace
 
 namespace Slic3r {
@@ -313,9 +324,7 @@ int MoonrakerPrinterAgent::start_send_gcode_to_sdcard(PrintParams      params,
     if (filename.empty()) {
         filename = params.task_name;
     }
-    if (!has_supported_gcode_suffix(filename)) {
-        filename += ".gcode";
-    }
+    ensure_gcode_suffix(filename, params.filename);
 
     // Sanitize filename to prevent path traversal attacks
     std::string safe_filename = sanitize_filename(filename);
@@ -356,9 +365,7 @@ int MoonrakerPrinterAgent::start_local_print(PrintParams params, OnUpdateStatusF
 
     // Extract filename for upload (relative to gcodes root)
     std::string upload_filename = source_path.filename().string();
-    if (!has_supported_gcode_suffix(upload_filename)) {
-        upload_filename += ".gcode";
-    }
+    ensure_gcode_suffix(upload_filename, gcode_path);
     // Sanitize filename to prevent path traversal attacks (extra safety)
     upload_filename = sanitize_filename(upload_filename);
 
