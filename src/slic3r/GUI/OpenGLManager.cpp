@@ -37,7 +37,7 @@ bool gl_extension_supported(const std::string& extension_name)
     if (extension_name.empty())
         return false;
 
-    if (GLAD_GL_VERSION_3_0 && glad_glGetStringi != nullptr) {
+    if (GLAD_GL_VERSION_3_0) {
         GLint count = 0;
         glsafe(::glGetIntegerv(GL_NUM_EXTENSIONS, &count));
         for (GLint i = 0; i < count; ++i) {
