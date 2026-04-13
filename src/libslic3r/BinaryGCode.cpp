@@ -5,6 +5,7 @@
 #include <boost/nowide/cstdio.hpp>
 #include <boost/nowide/fstream.hpp>
 #include <algorithm>
+#include <vector>
 
 namespace Slic3r::BinaryGCode {
 
@@ -25,9 +26,9 @@ std::string read_probe(const std::string& path)
     if (!file.is_open())
         throw Error(ErrorCode::IoError, "Unable to open file for BGCode detection: " + path);
 
-    std::string probe(PROBE_SIZE, '\0');
-    file.read(probe.data(), static_cast<std::streamsize>(probe.size()));
-    probe.resize(static_cast<size_t>(file.gcount()));
+    std::vector<char> probe_buffer(PROBE_SIZE);
+    file.read(probe_buffer.data(), static_cast<std::streamsize>(probe_buffer.size()));
+    std::string probe(probe_buffer.data(), static_cast<size_t>(file.gcount()));
     return probe;
 }
 

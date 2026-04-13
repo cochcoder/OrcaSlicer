@@ -2513,8 +2513,9 @@ std::string Print::export_gcode(const std::string& path_template, GCodeProcessor
         throw;
     }
     //BBS
-    if (result != nullptr)
-        result->conflict_result = m_conflict_result;
+    if (result == nullptr)
+        return path.c_str();
+    result->conflict_result = m_conflict_result;
     return path.c_str();
 }
 

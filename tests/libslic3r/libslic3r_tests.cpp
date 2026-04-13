@@ -4,6 +4,7 @@
 #include "libslic3r/Utils.hpp"
 #include <boost/filesystem.hpp>
 #include <boost/nowide/fstream.hpp>
+#include <stdexcept>
 #define NANOSVG_IMPLEMENTATION
 #include "nanosvg/nanosvg.h"
 #define NANOSVGRAST_IMPLEMENTATION
@@ -28,6 +29,8 @@ struct TempFileScope
 std::string read_file_content(const std::string& path)
 {
     boost::nowide::ifstream file(path, std::ios::binary);
+    if (!file.is_open())
+        throw std::runtime_error("Failed to open file for test read: " + path);
     return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
 }
 
