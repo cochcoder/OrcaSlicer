@@ -103,6 +103,10 @@ namespace {
 
 std::string linux_detect_session_backend()
 {
+    // Session backend detection priority:
+    // 1) XDG_SESSION_TYPE (desktop/session manager authoritative value)
+    // 2) WAYLAND_DISPLAY (explicit Wayland socket)
+    // 3) DISPLAY (X11 socket)
     const char* xdg_session_type = boost::nowide::getenv("XDG_SESSION_TYPE");
     if (xdg_session_type != nullptr && *xdg_session_type != '\0')
         return xdg_session_type;
@@ -120,6 +124,14 @@ std::string linux_detect_session_backend()
 
 std::string linux_select_gdk_backend(std::string& reason)
 {
+    // Backend selection policy:
+    // - ORCASLICER_GDK_BACKEND has highest priority (packager/app override)
+    // - Existing GDK_BACKEND is respected (user override)
+    // - Otherwise choose a session-aware default:
+    //   * Wayland session: "wayland,x11" (prefer Wayland, allow fallback)
+    //   * X11 session: "x11"
+    //   * Unknown session: "wayland,x11" safe autodetect path
+    // `reason` returns the policy branch that selected the backend for startup logs.
     const char* backend_override = boost::nowide::getenv("ORCASLICER_GDK_BACKEND");
     if (backend_override != nullptr && *backend_override != '\0') {
         reason = "orcaslicer_override";
@@ -148,6 +160,8 @@ std::string linux_select_gdk_backend(std::string& reason)
 
 bool linux_backend_may_use_x11(const std::string& backend)
 {
+    // XInitThreads is required when an X11 code path may be active.
+    // Check selected backend list first, then DISPLAY as an additional signal.
     if (backend.find("x11") != std::string::npos)
         return true;
 
