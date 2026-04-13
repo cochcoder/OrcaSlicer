@@ -240,6 +240,7 @@ extern CopyFileResult check_copy(const std::string& origin, const std::string& c
 extern bool is_plain_file(const boost::filesystem::directory_entry &path);
 extern bool is_ini_file(const boost::filesystem::directory_entry &path);
 extern bool is_idx_file(const boost::filesystem::directory_entry &path);
+extern bool is_bgcode_file(const std::string &path);
 extern bool is_gcode_file(const std::string &path);
 extern bool is_img_file(const std::string& path);
 extern bool is_gallery_file(const boost::filesystem::directory_entry& path, char const* type);

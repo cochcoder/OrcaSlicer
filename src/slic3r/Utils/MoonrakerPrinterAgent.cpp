@@ -88,6 +88,11 @@ std::string map_moonraker_state(std::string state)
     return "IDLE";
 }
 
+bool has_supported_gcode_suffix(const std::string& filename)
+{
+    return boost::iends_with(filename, ".gcode") || boost::iends_with(filename, ".bgcode");
+}
+
 } // namespace
 
 namespace Slic3r {
@@ -308,7 +313,7 @@ int MoonrakerPrinterAgent::start_send_gcode_to_sdcard(PrintParams      params,
     if (filename.empty()) {
         filename = params.task_name;
     }
-    if (!boost::iends_with(filename, ".gcode")) {
+    if (!has_supported_gcode_suffix(filename)) {
         filename += ".gcode";
     }
 
@@ -341,7 +346,7 @@ int MoonrakerPrinterAgent::start_local_print(PrintParams params, OnUpdateStatusF
         gcode_path = params.dst_file;
     }
 
-    // Check if file exists and has .gcode extension
+    // Check if file exists and has supported gcode extension
     namespace fs = boost::filesystem;
     fs::path source_path(gcode_path);
     if (!fs::exists(source_path)) {
@@ -351,7 +356,7 @@ int MoonrakerPrinterAgent::start_local_print(PrintParams params, OnUpdateStatusF
 
     // Extract filename for upload (relative to gcodes root)
     std::string upload_filename = source_path.filename().string();
-    if (!boost::iends_with(upload_filename, ".gcode")) {
+    if (!has_supported_gcode_suffix(upload_filename)) {
         upload_filename += ".gcode";
     }
     // Sanitize filename to prevent path traversal attacks (extra safety)

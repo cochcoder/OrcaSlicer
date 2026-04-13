@@ -5,6 +5,7 @@
 #include "libslic3r/Utils.hpp"
 #include "libslic3r/Print.hpp"
 #include "libslic3r/ClipperUtils.hpp"
+#include "libslic3r/BinaryGCode.hpp"
 #include "libslic3r/LocalesUtils.hpp"
 #include "libslic3r/format.hpp"
 #include "GCodeProcessor.hpp"
@@ -2495,11 +2496,13 @@ DynamicConfig GCodeProcessor::export_config_for_render() const
 void GCodeProcessor::process_file(const std::string& filename, std::function<void()> cancel_callback)
 {
     CNumericLocalesSetter locales_setter;
+    const auto normalized_input = BinaryGCode::normalize_for_gcode_parser(filename);
+    const std::string& parser_input = normalized_input.parser_path;
 
     // pre-processing
     // parse the gcode file to detect its producer
     {
-        m_parser.parse_file_raw(filename, [this](GCodeReader& reader, const char *begin, const char *end) {
+        m_parser.parse_file_raw(parser_input, [this](GCodeReader& reader, const char *begin, const char *end) {
             begin = skip_whitespaces(begin, end);
             if (begin != end && *begin == ';') {
                 // Comment.
@@ -2526,7 +2529,7 @@ void GCodeProcessor::process_file(const std::string& filename, std::function<voi
             // Silently substitute unknown values by new ones for loading configurations from OrcaSlicer's own G-code.
             // Showing substitution log or errors may make sense, but we are not really reading many values from the G-code config,
             // thus a probability of incorrect substitution is low and the G-code viewer is a consumer-only anyways.
-            config.load_from_gcode_file(filename, ForwardCompatibilitySubstitutionRule::EnableSilent);
+            config.load_from_gcode_file(parser_input, ForwardCompatibilitySubstitutionRule::EnableSilent);
 
             // Get the correct printer vendor based on the `printer_model` field
             auto printer_model_opt = config.opt<ConfigOptionString>("printer_model");
@@ -2544,17 +2547,17 @@ void GCodeProcessor::process_file(const std::string& filename, std::function<voi
             apply_config(config);
         }
         else if (m_producer == EProducer::Simplify3D)
-            apply_config_simplify3d(filename);
+            apply_config_simplify3d(parser_input);
         else if (m_producer == EProducer::SuperSlicer)
-            apply_config_superslicer(filename);
+            apply_config_superslicer(parser_input);
     }
 
     // process gcode
-    m_result.filename = filename;
+    m_result.filename = parser_input;
     m_result.id = ++s_result_id;
     initialize_result_moves();
     size_t parse_line_callback_cntr = 10000;
-    m_parser.parse_file(filename, [this, cancel_callback, &parse_line_callback_cntr](GCodeReader& reader, const GCodeReader::GCodeLine& line) {
+    m_parser.parse_file(parser_input, [this, cancel_callback, &parse_line_callback_cntr](GCodeReader& reader, const GCodeReader::GCodeLine& line) {
         if (-- parse_line_callback_cntr == 0) {
             // Don't call the cancel_callback() too often, do it every at every 10000'th line.
             parse_line_callback_cntr = 10000;

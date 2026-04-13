@@ -555,7 +555,7 @@ static const FileWildcards file_wildcards_by_type[FT_SIZE] = {
     /* FT_AMF */     { L("AMF files"),       { ".amf"sv, ".zip.amf"sv, ".xml"sv } },
     /* FT_3MF */     { L("3MF files"),       { ".3mf"sv } },
     /* FT_GCODE_3MF */ {L("Gcode 3MF files"), {".gcode.3mf"sv}},
-    /* FT_GCODE */   { L("G-code files"),    { ".gcode"sv} },
+    /* FT_GCODE */   { L("G-code files"),    { ".gcode"sv, ".bgcode"sv} },
 #ifdef __APPLE__
     /* FT_MODEL */
     {L("Supported files"), {".3mf"sv, ".stl"sv, ".oltp"sv, ".stp"sv, ".step"sv, ".svg"sv, ".amf"sv, ".obj"sv, ".usd"sv, ".usda"sv, ".usdc"sv, ".usdz"sv, ".abc"sv, ".ply"sv, ".drc"sv}},

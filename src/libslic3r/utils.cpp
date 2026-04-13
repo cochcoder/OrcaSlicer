@@ -1004,10 +1004,15 @@ bool is_idx_file(const boost::filesystem::directory_entry &dir_entry)
 	return is_plain_file(dir_entry) && strcasecmp(dir_entry.path().extension().string().c_str(), ".idx") == 0;
 }
 
+bool is_bgcode_file(const std::string &path)
+{
+    return boost::iends_with(path, ".bgcode");
+}
+
 //BBS: refine gcode appendix
 bool is_gcode_file(const std::string &path)
 {
-	return boost::iends_with(path, ".gcode"); // || boost::iends_with(path, ".g");
+	return boost::iends_with(path, ".gcode") || is_bgcode_file(path); // || boost::iends_with(path, ".g");
 }
 
 //BBS: add json support

@@ -1,5 +1,6 @@
 #include <catch2/catch_all.hpp>
 
+#include "libslic3r/BinaryGCode.hpp"
 #include "libslic3r/Utils.hpp"
 #define NANOSVG_IMPLEMENTATION
 #include "nanosvg/nanosvg.h"
@@ -39,6 +40,15 @@ TEST_CASE("string_printf", "[utils]") {
         std::string outs = Slic3r::string_printf("%s", input.c_str());
         REQUIRE(outs.compare(input) == 0);
     }
+}
+
+TEST_CASE("gcode_extension_detection", "[utils]") {
+    REQUIRE(Slic3r::is_gcode_file("test.gcode"));
+    REQUIRE(Slic3r::is_gcode_file("test.bgcode"));
+    REQUIRE_FALSE(Slic3r::is_gcode_file("test.3mf"));
+    REQUIRE(Slic3r::is_bgcode_file("test.bgcode"));
+    REQUIRE_FALSE(Slic3r::is_bgcode_file("test.gcode"));
+    REQUIRE(Slic3r::BinaryGCode::is_binary_gcode_path("test.bgcode"));
 }
 
 }

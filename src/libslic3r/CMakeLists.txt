@@ -77,6 +77,8 @@ set(lisbslic3r_sources
     BlacklistedLibraryCheck.hpp
     BoundingBox.cpp
     BoundingBox.hpp
+    BinaryGCode.cpp
+    BinaryGCode.hpp
     BridgeDetector.cpp
     BridgeDetector.hpp
     Brim.cpp
