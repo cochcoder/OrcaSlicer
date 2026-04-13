@@ -107,9 +107,14 @@ std::string linux_detect_session_backend()
     // 1) XDG_SESSION_TYPE (desktop/session manager authoritative value)
     // 2) WAYLAND_DISPLAY (explicit Wayland socket)
     // 3) DISPLAY (X11 socket)
+    // Returns only canonical values: "wayland", "x11", "unknown".
     const char* xdg_session_type = boost::nowide::getenv("XDG_SESSION_TYPE");
-    if (xdg_session_type != nullptr && *xdg_session_type != '\0')
-        return xdg_session_type;
+    if (xdg_session_type != nullptr && *xdg_session_type != '\0') {
+        if (boost::algorithm::iequals(xdg_session_type, "wayland"))
+            return "wayland";
+        if (boost::algorithm::iequals(xdg_session_type, "x11"))
+            return "x11";
+    }
 
     const char* wayland_display = boost::nowide::getenv("WAYLAND_DISPLAY");
     if (wayland_display != nullptr && *wayland_display != '\0')
