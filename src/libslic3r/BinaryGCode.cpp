@@ -3,6 +3,7 @@
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/nowide/fstream.hpp>
+#include <algorithm>
 
 namespace Slic3r::BinaryGCode {
 
