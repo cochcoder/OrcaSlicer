@@ -2492,7 +2492,9 @@ std::string Print::export_gcode(const std::string& path_template, GCodeProcessor
     // The following line may die for multiple reasons.
     GCode gcode;
     const bool export_as_bgcode = BinaryGCode::is_binary_gcode_path(path);
-    const std::string text_export_path = export_as_bgcode ? path + ".text.gcode" : path;
+    const std::string text_export_path = export_as_bgcode
+        ? (boost::filesystem::temp_directory_path() / boost::filesystem::unique_path("orcaslicer-export-bgcode-%%%%%%%%.gcode")).string()
+        : path;
     //BBS: compute plate offset for gcode-generator
     const Vec3d origin = this->get_plate_origin();
     gcode.set_gcode_offset(origin(0), origin(1));

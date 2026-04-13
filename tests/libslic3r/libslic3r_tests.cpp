@@ -111,7 +111,7 @@ TEST_CASE("bgcode_version_validation", "[utils][bgcode]") {
 
     try {
         (void)Slic3r::BinaryGCode::normalize_for_gcode_parser(bg_path.string());
-        FAIL("normalize_for_gcode_parser should throw on unsupported BGCode version");
+        FAIL("Expected normalize_for_gcode_parser to throw on unsupported BGCode version 2.0");
     } catch (const Slic3r::BinaryGCode::Error& err) {
         REQUIRE(err.code() == Slic3r::BinaryGCode::ErrorCode::UnsupportedVersion);
     }

@@ -14,6 +14,8 @@ constexpr size_t PROBE_SIZE = 4096;
 // Header probe currently expects: "BGCODE" + 2 bytes (major/minor version).
 constexpr char BGCODE_MAGIC[] = "BGCODE";
 constexpr size_t BGCODE_MAGIC_SIZE = sizeof(BGCODE_MAGIC) - 1;
+constexpr size_t BGCODE_MAJOR_VERSION_OFFSET = BGCODE_MAGIC_SIZE;
+constexpr size_t BGCODE_MINOR_VERSION_OFFSET = BGCODE_MAGIC_SIZE + 1;
 constexpr unsigned char SUPPORTED_MAJOR_VERSION = 1;
 constexpr unsigned char SUPPORTED_MINOR_VERSION = 0;
 
@@ -75,8 +77,8 @@ DetectionResult detect_file(const std::string& path)
     ret.is_binary_gcode = is_binary_gcode_path(path) || has_magic;
 
     if (has_magic && probe.size() >= BGCODE_MAGIC_SIZE + 2) {
-        ret.major_version = static_cast<unsigned char>(probe[BGCODE_MAGIC_SIZE + 0]);
-        ret.minor_version = static_cast<unsigned char>(probe[BGCODE_MAGIC_SIZE + 1]);
+        ret.major_version = static_cast<unsigned char>(probe[BGCODE_MAJOR_VERSION_OFFSET]);
+        ret.minor_version = static_cast<unsigned char>(probe[BGCODE_MINOR_VERSION_OFFSET]);
     }
 
     return ret;
@@ -102,8 +104,8 @@ NormalizedInput normalize_for_gcode_parser(const std::string& path)
     if (content.size() < BGCODE_MAGIC_SIZE + 2)
         throw Error(ErrorCode::InvalidData, "The selected BGCode file is truncated: " + path);
 
-    const unsigned char major = static_cast<unsigned char>(content[BGCODE_MAGIC_SIZE + 0]);
-    const unsigned char minor = static_cast<unsigned char>(content[BGCODE_MAGIC_SIZE + 1]);
+    const unsigned char major = static_cast<unsigned char>(content[BGCODE_MAJOR_VERSION_OFFSET]);
+    const unsigned char minor = static_cast<unsigned char>(content[BGCODE_MINOR_VERSION_OFFSET]);
     if (major != SUPPORTED_MAJOR_VERSION) {
         throw Error(
             ErrorCode::UnsupportedVersion,
@@ -120,7 +122,7 @@ NormalizedInput normalize_for_gcode_parser(const std::string& path)
     }
 
     const boost::filesystem::path tmp_path =
-        boost::filesystem::temp_directory_path() / boost::filesystem::unique_path("orcaslicer-bgcode-%%%%-%%%%-%%%%.gcode");
+        boost::filesystem::temp_directory_path() / boost::filesystem::unique_path("orcaslicer-bgcode-%%%%%%%%.gcode");
     write_all(tmp_path.string(), payload);
     return { path, tmp_path.string(), true };
 }
