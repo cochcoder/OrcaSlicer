@@ -19,8 +19,10 @@
 #endif /* WIN32 */
 
 #include <cstdio>
+#include <cctype>
 #include <string>
 #include <cstring>
+#include <cerrno>
 #include <iostream>
 #include <math.h>
 
@@ -101,6 +103,10 @@ using namespace Slic3r;
 #ifdef __WXGTK__
 namespace {
 
+constexpr const char* kLinuxBackendWayland = "wayland";
+constexpr const char* kLinuxBackendX11     = "x11";
+constexpr const char* kLinuxBackendUnknown = "unknown";
+
 std::string linux_detect_session_backend()
 {
     // Session backend detection priority:
@@ -110,21 +116,48 @@ std::string linux_detect_session_backend()
     // Returns only canonical values: "wayland", "x11", "unknown".
     const char* xdg_session_type = boost::nowide::getenv("XDG_SESSION_TYPE");
     if (xdg_session_type != nullptr && *xdg_session_type != '\0') {
-        if (boost::algorithm::iequals(xdg_session_type, "wayland"))
-            return "wayland";
-        if (boost::algorithm::iequals(xdg_session_type, "x11"))
-            return "x11";
+        if (boost::algorithm::iequals(xdg_session_type, kLinuxBackendWayland))
+            return kLinuxBackendWayland;
+        if (boost::algorithm::iequals(xdg_session_type, kLinuxBackendX11))
+            return kLinuxBackendX11;
     }
 
     const char* wayland_display = boost::nowide::getenv("WAYLAND_DISPLAY");
     if (wayland_display != nullptr && *wayland_display != '\0')
-        return "wayland";
+        return kLinuxBackendWayland;
 
     const char* x11_display = boost::nowide::getenv("DISPLAY");
     if (x11_display != nullptr && *x11_display != '\0')
-        return "x11";
+        return kLinuxBackendX11;
 
-    return "unknown";
+    return kLinuxBackendUnknown;
+}
+
+bool linux_backend_list_contains(const std::string& backends, const char* token)
+{
+    size_t begin = 0;
+    while (begin < backends.size()) {
+        size_t end = backends.find(',', begin);
+        if (end == std::string::npos)
+            end = backends.size();
+
+        size_t token_begin = begin;
+        while (token_begin < end && std::isspace(static_cast<unsigned char>(backends[token_begin])))
+            ++token_begin;
+
+        size_t token_end = end;
+        while (token_end > token_begin && std::isspace(static_cast<unsigned char>(backends[token_end - 1])))
+            --token_end;
+
+        if (token_end > token_begin) {
+            const std::string current_token = backends.substr(token_begin, token_end - token_begin);
+            if (boost::algorithm::iequals(current_token, token))
+                return true;
+        }
+
+        begin = end + 1;
+    }
+    return false;
 }
 
 std::string linux_select_gdk_backend(std::string& reason)
@@ -150,11 +183,11 @@ std::string linux_select_gdk_backend(std::string& reason)
     }
 
     const std::string session_backend = linux_detect_session_backend();
-    if (session_backend == "wayland") {
+    if (session_backend == kLinuxBackendWayland) {
         reason = "wayland_default_with_x11_fallback";
         return "wayland,x11";
     }
-    if (session_backend == "x11") {
+    if (session_backend == kLinuxBackendX11) {
         reason = "x11_session";
         return "x11";
     }
@@ -167,7 +200,7 @@ bool linux_backend_may_use_x11(const std::string& backend)
 {
     // XInitThreads is required when an X11 code path may be active.
     // Check selected backend list first, then DISPLAY as an additional signal.
-    if (backend.find("x11") != std::string::npos)
+    if (linux_backend_list_contains(backend, kLinuxBackendX11))
         return true;
 
     const char* x11_display = boost::nowide::getenv("DISPLAY");
@@ -1264,8 +1297,11 @@ int CLI::run(int argc, char **argv)
 #ifdef __WXGTK__
     std::string backend_reason;
     const std::string selected_backend = linux_select_gdk_backend(backend_reason);
-    if (::setenv("GDK_BACKEND", selected_backend.c_str(), /* replace */ true) != 0)
-        BOOST_LOG_TRIVIAL(warning) << "Failed to set GDK_BACKEND=" << selected_backend;
+    if (::setenv("GDK_BACKEND", selected_backend.c_str(), /* replace */ true) != 0) {
+        const int setenv_errno = errno;
+        BOOST_LOG_TRIVIAL(warning) << "Failed to set GDK_BACKEND=" << selected_backend
+            << " errno=" << setenv_errno << " (" << std::strerror(setenv_errno) << ")";
+    }
     BOOST_LOG_TRIVIAL(info) << "Linux backend selection: GDK_BACKEND=" << selected_backend << " reason=" << backend_reason;
 
     // WebKit2GTK's compositing mode can fail under XWayland, causing WebViews
