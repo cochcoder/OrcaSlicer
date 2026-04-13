@@ -15,7 +15,7 @@
 #include "slic3r/Utils/UndoRedo.hpp"
 
 
-#include <GL/glew.h>
+#include <slic3r/GUI/OpenGLIncludes.hpp>
 
 namespace Slic3r::GUI {
 

@@ -6,7 +6,7 @@
 #include "libslic3r/AppConfig.hpp"
 
 
-#include <GL/glew.h>
+#include <slic3r/GUI/OpenGLIncludes.hpp>
 
 #include <wx/utils.h>
 

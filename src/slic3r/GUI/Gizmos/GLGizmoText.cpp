@@ -16,7 +16,7 @@
 
 #include <boost/log/trivial.hpp>
 
-#include <GL/glew.h>
+#include <slic3r/GUI/OpenGLIncludes.hpp>
 
 #ifndef IMGUI_DEFINE_MATH_OPERATORS
 #define IMGUI_DEFINE_MATH_OPERATORS

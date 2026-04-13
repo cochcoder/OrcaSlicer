@@ -3,7 +3,7 @@
 
 #include <vector>
 #include <string>
-#include <GL/glew.h>
+#include <slic3r/GUI/OpenGLIncludes.hpp>
 #include <wx/string.h>
 #include <wx/fontenc.h>
 #include "Job.hpp"

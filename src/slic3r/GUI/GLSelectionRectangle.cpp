@@ -7,7 +7,7 @@
 #include "Plater.hpp"
 #include <igl/project.h>
 
-#include <GL/glew.h>
+#include <slic3r/GUI/OpenGLIncludes.hpp>
 
 namespace Slic3r {
 namespace GUI {

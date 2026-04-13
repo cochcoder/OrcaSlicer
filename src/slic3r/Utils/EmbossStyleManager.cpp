@@ -1,6 +1,6 @@
 #include "EmbossStyleManager.hpp"
 #include <optional>
-#include <GL/glew.h> // Imgui texture
+#include <slic3r/GUI/OpenGLIncludes.hpp> // Imgui texture
 #include <imgui/imgui_internal.h> // ImTextCharFromUtf8
 #include <libslic3r/AppConfig.hpp>
 #include <libslic3r/Utils.hpp> // ScopeGuard

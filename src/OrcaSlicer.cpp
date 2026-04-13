@@ -6453,7 +6453,7 @@ int CLI::run(int argc, char **argv)
                     BOOST_LOG_TRIVIAL(error) << "init opengl failed! skip thumbnail generating" << std::endl;
                 }
                 else {
-                    BOOST_LOG_TRIVIAL(info) << "glewInit Success." << std::endl;
+                    BOOST_LOG_TRIVIAL(info) << "OpenGL loader initialization succeeded." << std::endl;
                     GLVolumeCollection glvolume_collection;
                     Model &model = m_models[0];
                     int obj_extruder_id = 1, volume_extruder_id = 1;

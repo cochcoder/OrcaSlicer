@@ -32,7 +32,7 @@
 #endif // ENABLE_ACTUAL_SPEED_DEBUG
 #include <imgui/imgui_internal.h>
 
-#include <GL/glew.h>
+#include <slic3r/GUI/OpenGLIncludes.hpp>
 #include <boost/log/trivial.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <boost/nowide/cstdio.hpp>

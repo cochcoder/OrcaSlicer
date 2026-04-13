@@ -50,7 +50,7 @@
 #include <cereal/types/string.hpp>
 #include <cereal/archives/binary.hpp>
 
-#include <GL/glew.h>
+#include <slic3r/GUI/OpenGLIncludes.hpp>
 #include <chrono> // measure enumeration of fonts
 
 // uncomment for easier debug

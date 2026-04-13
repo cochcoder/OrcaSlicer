@@ -12,7 +12,7 @@
 
 #include <numeric>
 
-#include <GL/glew.h>
+#include <slic3r/GUI/OpenGLIncludes.hpp>
 
 #include <tbb/parallel_for.h>
 #include <future>

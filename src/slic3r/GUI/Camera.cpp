@@ -8,7 +8,7 @@
 #include "Plater.hpp"
 #endif // ENABLE_CAMERA_STATISTICS
 
-#include <GL/glew.h>
+#include <slic3r/GUI/OpenGLIncludes.hpp>
 
 namespace Slic3r {
 namespace GUI {

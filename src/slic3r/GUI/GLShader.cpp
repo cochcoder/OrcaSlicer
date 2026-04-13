@@ -7,7 +7,7 @@
 #include "libslic3r/Color.hpp"
 
 #include <boost/nowide/fstream.hpp>
-#include <GL/glew.h>
+#include <slic3r/GUI/OpenGLIncludes.hpp>
 #include <cassert>
 
 #include <boost/log/trivial.hpp>

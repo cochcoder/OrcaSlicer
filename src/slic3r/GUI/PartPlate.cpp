@@ -5,7 +5,7 @@
 #include <string>
 #include <regex>
 #include <future>
-#include <GL/glew.h>
+#include <slic3r/GUI/OpenGLIncludes.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/optional.hpp>
 #include <boost/filesystem/path.hpp>

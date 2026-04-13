@@ -15,7 +15,7 @@
 #include "Plater.hpp"
 #include "Camera.hpp"
 
-#include <GL/glew.h>
+#include <slic3r/GUI/OpenGLIncludes.hpp>
 
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/filesystem/operations.hpp>

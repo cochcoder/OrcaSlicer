@@ -1,6 +1,6 @@
 #include "TextLines.hpp"
 
-#include <GL/glew.h>
+#include <slic3r/GUI/OpenGLIncludes.hpp>
 
 #include "libslic3r/Model.hpp"
 

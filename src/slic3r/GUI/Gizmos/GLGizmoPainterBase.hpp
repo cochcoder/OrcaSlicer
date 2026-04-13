@@ -10,7 +10,7 @@
 #include "libslic3r/Model.hpp"
 
 #include <cereal/types/vector.hpp>
-#include <GL/glew.h>
+#include <slic3r/GUI/OpenGLIncludes.hpp>
 
 #include <memory>
 

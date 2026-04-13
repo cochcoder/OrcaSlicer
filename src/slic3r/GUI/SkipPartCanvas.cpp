@@ -1,4 +1,4 @@
-#include <GL/glew.h>
+#include <slic3r/GUI/OpenGLIncludes.hpp>
 #include "SkipPartCanvas.hpp"
 
 #include <opencv2/opencv.hpp>

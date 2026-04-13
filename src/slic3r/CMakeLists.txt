@@ -718,7 +718,7 @@ if (WIN32)
 else ()
     add_library(libslic3r_gui STATIC ${SLIC3R_GUI_SOURCES})
 endif ()
-target_include_directories(libslic3r_gui PRIVATE Utils ${CMAKE_CURRENT_BINARY_DIR})
+target_include_directories(libslic3r_gui PRIVATE Utils ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/../libvgcode/glad/include)
 
 if (WIN32)
     target_include_directories(libslic3r_gui SYSTEM PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../deps/WebView2/include)
@@ -736,7 +736,7 @@ else()
     set(_opengl_link_lib OpenGL::GL)
 endif()
 
-target_link_libraries(libslic3r_gui libslic3r cereal::cereal imgui imguizmo minilzo libvgcode md4c-html GLEW::GLEW OpenGL::GL hidapi ${wxWidgets_LIBRARIES} glfw libcurl OpenSSL::SSL OpenSSL::Crypto noise::noise)
+target_link_libraries(libslic3r_gui libslic3r cereal::cereal imgui imguizmo minilzo libvgcode md4c-html OpenGL::GL hidapi ${wxWidgets_LIBRARIES} glfw libcurl OpenSSL::SSL OpenSSL::Crypto noise::noise)
 
 
 if (MSVC)

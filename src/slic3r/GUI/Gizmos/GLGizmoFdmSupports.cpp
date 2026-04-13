@@ -15,7 +15,7 @@
 #include "slic3r/GUI/GUI.hpp"
 #include "slic3r/Utils/UndoRedo.hpp"
 
-#include <GL/glew.h>
+#include <slic3r/GUI/OpenGLIncludes.hpp>
 
 #include <boost/log/trivial.hpp>
 

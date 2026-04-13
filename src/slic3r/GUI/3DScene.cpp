@@ -1,4 +1,4 @@
-#include <GL/glew.h>
+#include <slic3r/GUI/OpenGLIncludes.hpp>
 
 #include "3DScene.hpp"
 #include "GLShader.hpp"

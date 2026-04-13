@@ -7,7 +7,7 @@
 
 #include "libslic3r/Platform.hpp"
 
-#include <GL/glew.h>
+#include <slic3r/GUI/OpenGLIncludes.hpp>
 
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/classification.hpp>
@@ -22,18 +22,6 @@
 #include "../Utils/MacDarkMode.hpp"
 #endif // __APPLE__
 
-// Verify GLEW and wxWidgets use the same OpenGL backend (EGL vs GLX).
-// A mismatch causes rendering failures: GLEW's function loading must match
-// the context type created by wxWidgets.
-#if defined(__linux__)
-    #if defined(GLEW_EGL) && (!defined(wxUSE_GLCANVAS_EGL) || !wxUSE_GLCANVAS_EGL)
-        #error "OpenGL backend mismatch: GLEW has EGL support enabled but wxWidgets does not. Ensure GLEW_USE_EGL and wxUSE_GLCANVAS_EGL are both ON or both OFF."
-    #endif
-    #if !defined(GLEW_EGL) && defined(wxUSE_GLCANVAS_EGL) && wxUSE_GLCANVAS_EGL
-        #error "OpenGL backend mismatch: wxWidgets has EGL support enabled but GLEW does not. Ensure GLEW_USE_EGL and wxUSE_GLCANVAS_EGL are both ON or both OFF."
-    #endif
-#endif
-
 namespace Slic3r {
 namespace GUI {
 
@@ -42,6 +30,31 @@ std::string gl_get_string_safe(GLenum param, const std::string& default_value)
 {
     const char* value = (const char*)::glGetString(param);
     return std::string((value != nullptr) ? value : default_value);
+}
+
+bool gl_extension_supported(const std::string& extension_name)
+{
+    if (extension_name.empty())
+        return false;
+
+    if (GLAD_GL_VERSION_3_0 && glad_glGetStringi != nullptr) {
+        GLint count = 0;
+        glsafe(::glGetIntegerv(GL_NUM_EXTENSIONS, &count));
+        for (GLint i = 0; i < count; ++i) {
+            const char* ext_name = reinterpret_cast<const char*>(::glGetStringi(GL_EXTENSIONS, i));
+            if (ext_name != nullptr && extension_name == ext_name)
+                return true;
+        }
+        return false;
+    }
+
+    const std::string extensions = gl_get_string_safe(GL_EXTENSIONS, "");
+    if (extensions.empty())
+        return false;
+
+    std::vector<std::string> extensions_list;
+    boost::split(extensions_list, extensions, boost::is_any_of(" "), boost::token_compress_on);
+    return std::find(extensions_list.begin(), extensions_list.end(), extension_name) != extensions_list.end();
 }
 
 const std::string& OpenGLManager::GLInfo::get_version() const
@@ -121,12 +134,12 @@ void OpenGLManager::GLInfo::detect() const
     if (Slic3r::total_physical_memory() / (1024 * 1024 * 1024) < 6)
         *max_tex_size /= 2;
 
-    if (GLEW_EXT_texture_filter_anisotropic) {
+    if (gl_extension_supported("GL_EXT_texture_filter_anisotropic")) {
         float* max_anisotropy = const_cast<float*>(&m_max_anisotropy);
         glsafe(::glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, max_anisotropy));
     }
 
-    if (!GLEW_ARB_compatibility)
+    if (!gl_extension_supported("GL_ARB_compatibility"))
         *const_cast<bool*>(&m_core_profile) = true;
 
     *const_cast<bool*>(&m_detected) = true;
@@ -245,24 +258,18 @@ OpenGLManager::~OpenGLManager()
 bool OpenGLManager::init_gl(bool popup_error)
 {
     if (!m_gl_initialized) {
-        glewExperimental = true;
-        GLenum result = glewInit();
-        if (result != GLEW_OK) {
-            BOOST_LOG_TRIVIAL(error) << "Unable to init glew library, Error: " << glewGetErrorString(result);
+        if (gladLoaderLoadGL() == 0) {
+            BOOST_LOG_TRIVIAL(error) << "Unable to init glad OpenGL loader.";
             return false;
         }
-	//BOOST_LOG_TRIVIAL(info) << "glewInit Success."<< std::endl;
         m_gl_initialized = true;
-        if (GLEW_EXT_texture_compression_s3tc)
-            s_compressed_textures_supported = true;
-        else
-            s_compressed_textures_supported = false;
+        s_compressed_textures_supported = gl_extension_supported("GL_EXT_texture_compression_s3tc");
 
-        if (GLEW_ARB_framebuffer_object) {
+        if (GLAD_GL_VERSION_3_0 || gl_extension_supported("GL_ARB_framebuffer_object")) {
             s_framebuffers_type = EFramebufferType::Arb;
             BOOST_LOG_TRIVIAL(info) << "Found Framebuffer Type ARB."<< std::endl;
         }
-        else if (GLEW_EXT_framebuffer_object) {
+        else if (gl_extension_supported("GL_EXT_framebuffer_object")) {
             BOOST_LOG_TRIVIAL(info) << "Found Framebuffer Type Ext."<< std::endl;
             s_framebuffers_type = EFramebufferType::Ext;
         }

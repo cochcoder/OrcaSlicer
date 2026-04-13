@@ -11,7 +11,7 @@
 #include "GUI_App.hpp"
 #include "GLModel.hpp"
 
-#include <GL/glew.h>
+#include <slic3r/GUI/OpenGLIncludes.hpp>
 
 #include <wx/image.h>
 #include <boost/filesystem.hpp>
