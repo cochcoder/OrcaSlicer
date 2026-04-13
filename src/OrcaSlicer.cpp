@@ -19,7 +19,6 @@
 #endif /* WIN32 */
 
 #include <cstdio>
-#include <cctype>
 #include <string>
 #include <cstring>
 #include <cerrno>
@@ -37,6 +36,7 @@ using namespace nlohmann;
 #endif
 
 #include <boost/algorithm/string/predicate.hpp>
+#include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/nowide/args.hpp>
 #include <boost/nowide/cstdlib.hpp>
@@ -135,31 +135,21 @@ std::string linux_detect_session_backend()
 
 bool linux_backend_list_contains(const std::string& backends, const char* token)
 {
-    size_t begin = 0;
-    while (begin < backends.size()) {
-        size_t end = backends.find(',', begin);
-        if (end == std::string::npos)
-            end = backends.size();
-
-        size_t token_begin = begin;
-        while (token_begin < end && std::isspace(static_cast<unsigned char>(backends[token_begin])))
-            ++token_begin;
-
-        size_t token_end = end;
-        while (token_end > token_begin && std::isspace(static_cast<unsigned char>(backends[token_end - 1])))
-            --token_end;
-
-        if (token_end > token_begin) {
-            const std::string current_token = backends.substr(token_begin, token_end - token_begin);
-            if (boost::algorithm::iequals(current_token, token))
-                return true;
-        }
-
-        begin = end + 1;
+    std::vector<std::string> backend_tokens;
+    boost::algorithm::split(backend_tokens, backends, boost::algorithm::is_any_of(","));
+    for (std::string backend_token : backend_tokens) {
+        boost::algorithm::trim(backend_token);
+        if (!backend_token.empty() && boost::algorithm::iequals(backend_token, token))
+            return true;
     }
     return false;
 }
 
+// Selects the GTK backend in this strict priority:
+// 1) ORCASLICER_GDK_BACKEND (packager/app override)
+// 2) existing GDK_BACKEND (user override)
+// 3) session-aware default (Wayland preferred with X11 fallback where applicable)
+// `reason` is an output parameter used for startup diagnostics.
 std::string linux_select_gdk_backend(std::string& reason)
 {
     // Backend selection policy:
