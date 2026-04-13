@@ -2558,7 +2558,7 @@ void GCodeProcessor::process_file(const std::string& filename, std::function<voi
         }
 
         // process gcode
-        m_result.filename = normalized_input.uses_temporary_path ? parser_input : filename;
+        m_result.filename = filename;
         m_result.id = ++s_result_id;
         initialize_result_moves();
         size_t parse_line_callback_cntr = 10000;

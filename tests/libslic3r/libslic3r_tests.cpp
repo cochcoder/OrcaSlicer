@@ -10,6 +10,16 @@
 #include "nanosvg/nanosvgrast.h"
 namespace {
 
+struct TempFileScope
+{
+    std::vector<boost::filesystem::path> paths;
+    ~TempFileScope()
+    {
+        for (const auto& path : paths)
+            boost::filesystem::remove(path);
+    }
+};
+
 std::string read_file_content(const std::string& path)
 {
     boost::nowide::ifstream file(path, std::ios::binary);
@@ -63,6 +73,7 @@ TEST_CASE("bgcode_roundtrip_normalization", "[utils][bgcode]") {
     namespace fs = boost::filesystem;
     const fs::path text_path = fs::temp_directory_path() / fs::unique_path("orcaslicer-bgcode-text-%%%%.gcode");
     const fs::path bg_path = fs::temp_directory_path() / fs::unique_path("orcaslicer-bgcode-bin-%%%%.bgcode");
+    TempFileScope cleanup { { text_path, bg_path } };
 
     const std::string payload = "G1 X1.000 Y2.000 E0.500\n; generated\nM104 S200\n";
     {
@@ -81,15 +92,13 @@ TEST_CASE("bgcode_roundtrip_normalization", "[utils][bgcode]") {
     REQUIRE(normalized.uses_temporary_path);
     REQUIRE(normalized.parser_path != normalized.source_path);
     REQUIRE(read_file_content(normalized.parser_path) == payload);
-
-    fs::remove(text_path);
-    fs::remove(bg_path);
-    fs::remove(normalized.parser_path);
+    cleanup.paths.push_back(normalized.parser_path);
 }
 
 TEST_CASE("bgcode_version_validation", "[utils][bgcode]") {
     namespace fs = boost::filesystem;
     const fs::path bg_path = fs::temp_directory_path() / fs::unique_path("orcaslicer-bgcode-v2-%%%%.bgcode");
+    TempFileScope cleanup { { bg_path } };
 
     {
         boost::nowide::ofstream file(bg_path.string(), std::ios::binary | std::ios::trunc);
@@ -107,12 +116,12 @@ TEST_CASE("bgcode_version_validation", "[utils][bgcode]") {
         REQUIRE(err.code() == Slic3r::BinaryGCode::ErrorCode::UnsupportedVersion);
     }
 
-    fs::remove(bg_path);
 }
 
 TEST_CASE("bgcode_plain_text_passthrough", "[utils][bgcode]") {
     namespace fs = boost::filesystem;
     const fs::path bg_path = fs::temp_directory_path() / fs::unique_path("orcaslicer-bgcode-plain-%%%%.bgcode");
+    TempFileScope cleanup { { bg_path } };
 
     {
         boost::nowide::ofstream file(bg_path.string(), std::ios::binary | std::ios::trunc);
@@ -123,8 +132,6 @@ TEST_CASE("bgcode_plain_text_passthrough", "[utils][bgcode]") {
     const auto normalized = Slic3r::BinaryGCode::normalize_for_gcode_parser(bg_path.string());
     REQUIRE_FALSE(normalized.uses_temporary_path);
     REQUIRE(normalized.parser_path == bg_path.string());
-
-    fs::remove(bg_path);
 }
 
 }
